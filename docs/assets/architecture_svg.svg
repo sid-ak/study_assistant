@@ -1,0 +1,163 @@
+<svg width="100%" viewBox="0 0 680 620" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>RAG pipeline architecture diagram</title>
+  <desc>Three-lane architecture showing ingestion, retrieval, and generation layers connecting materials to a React frontend via Claude.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, sans-serif; fill: #1a1a1a; }
+      .th { font-size: 14px; font-weight: 500; }
+      .ts { font-size: 12px; font-weight: 400; fill: #555; }
+      .lane { font-size: 11px; font-weight: 400; fill: #999; }
+
+      /* Gray nodes */
+      .c-gray rect { fill: #f1efe8; stroke: #5f5e5a; }
+      .c-gray .th { fill: #2c2c2a; }
+
+      /* Teal nodes */
+      .c-teal rect { fill: #e1f5ee; stroke: #0f6e56; }
+      .c-teal .th { fill: #085041; }
+      .c-teal .ts { fill: #0f6e56; }
+
+      /* Purple nodes */
+      .c-purple rect { fill: #eeedfe; stroke: #534ab7; }
+      .c-purple .th { fill: #26215c; }
+      .c-purple .ts { fill: #534ab7; }
+
+      /* Coral nodes */
+      .c-coral rect { fill: #faece7; stroke: #993c1d; }
+      .c-coral .th { fill: #4a1b0c; }
+      .c-coral .ts { fill: #993c1d; }
+
+      /* Amber nodes */
+      .c-amber rect { fill: #faeeda; stroke: #854f0b; }
+      .c-amber .th { fill: #412402; }
+      .c-amber .ts { fill: #854f0b; }
+
+      .divider { stroke: #ccc; stroke-width: 0.5; stroke-dasharray: 4 4; }
+      .arr { stroke: #888; stroke-width: 1; fill: none; marker-end: url(#arrow); }
+      .dashed-arr { stroke: #aaa; stroke-width: 1; fill: none; stroke-dasharray: 5 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <!-- Lane dividers -->
+  <line class="divider" x1="55" y1="162" x2="640" y2="162"/>
+  <line class="divider" x1="55" y1="330" x2="640" y2="330"/>
+  <line class="divider" x1="55" y1="490" x2="640" y2="490"/>
+
+  <!-- Lane labels (rotated) -->
+  <text class="lane" transform="translate(34,112) rotate(-90)" text-anchor="middle">Ingestion</text>
+  <text class="lane" transform="translate(34,270) rotate(-90)" text-anchor="middle">Retrieval</text>
+  <text class="lane" transform="translate(34,430) rotate(-90)" text-anchor="middle">Generation</text>
+
+  <!-- ── INGESTION ── -->
+
+  <!-- Materials -->
+  <g class="c-gray">
+    <rect x="60" y="60" width="100" height="44" rx="8" stroke-width="0.5"/>
+    <text class="th" x="110" y="82" text-anchor="middle" dominant-baseline="central">Materials</text>
+  </g>
+
+  <line class="arr" x1="160" y1="82" x2="200" y2="82"/>
+
+  <!-- Ingest -->
+  <g class="c-teal">
+    <rect x="200" y="60" width="138" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="269" y="80" text-anchor="middle" dominant-baseline="central">Ingest</text>
+    <text class="ts" x="269" y="98" text-anchor="middle" dominant-baseline="central">Parse + semantic chunk</text>
+  </g>
+
+  <line class="arr" x1="338" y1="88" x2="378" y2="88"/>
+
+  <!-- Embed -->
+  <g class="c-teal">
+    <rect x="378" y="60" width="118" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="437" y="80" text-anchor="middle" dominant-baseline="central">Embed</text>
+    <text class="ts" x="437" y="98" text-anchor="middle" dominant-baseline="central">bge model</text>
+  </g>
+
+  <line class="arr" x1="496" y1="88" x2="536" y2="88"/>
+
+  <!-- pgvector -->
+  <g class="c-purple">
+    <rect x="536" y="60" width="96" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="584" y="80" text-anchor="middle" dominant-baseline="central">pgvector</text>
+    <text class="ts" x="584" y="98" text-anchor="middle" dominant-baseline="central">Vector store</text>
+  </g>
+
+  <!-- ── RETRIEVAL ── -->
+
+  <!-- Query -->
+  <g class="c-gray">
+    <rect x="60" y="190" width="100" height="44" rx="8" stroke-width="0.5"/>
+    <text class="th" x="110" y="212" text-anchor="middle" dominant-baseline="central">Query</text>
+  </g>
+
+  <line class="arr" x1="160" y1="212" x2="200" y2="212"/>
+
+  <!-- Hybrid retrieve -->
+  <g class="c-teal">
+    <rect x="200" y="187" width="160" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="280" y="207" text-anchor="middle" dominant-baseline="central">Hybrid retrieve</text>
+    <text class="ts" x="280" y="225" text-anchor="middle" dominant-baseline="central">Dense + BM25, RRF fusion</text>
+  </g>
+
+  <line class="arr" x1="360" y1="215" x2="398" y2="215"/>
+
+  <!-- Rerank -->
+  <g class="c-teal">
+    <rect x="398" y="187" width="140" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="468" y="207" text-anchor="middle" dominant-baseline="central">Rerank</text>
+    <text class="ts" x="468" y="225" text-anchor="middle" dominant-baseline="central">bge cross-encoder</text>
+  </g>
+
+  <!-- pgvector → hybrid retrieve (cross-lane) -->
+  <path class="dashed-arr" d="M584 116 L584 175 L280 175 L280 187"/>
+
+  <!-- ── GENERATION ── -->
+
+  <!-- MCP server -->
+  <g class="c-purple">
+    <rect x="60" y="360" width="140" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="130" y="380" text-anchor="middle" dominant-baseline="central">MCP server</text>
+    <text class="ts" x="130" y="398" text-anchor="middle" dominant-baseline="central">Tools + source docs</text>
+  </g>
+
+  <line class="arr" x1="200" y1="388" x2="228" y2="388"/>
+
+  <!-- FastAPI + LangGraph -->
+  <g class="c-purple">
+    <rect x="230" y="360" width="170" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="315" y="378" text-anchor="middle" dominant-baseline="central">FastAPI + LangGraph</text>
+    <text class="ts" x="315" y="396" text-anchor="middle" dominant-baseline="central">HITL, Postgres checkpointer</text>
+  </g>
+
+  <line class="arr" x1="400" y1="388" x2="428" y2="388"/>
+
+  <!-- Claude -->
+  <g class="c-coral">
+    <rect x="430" y="360" width="136" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="498" y="378" text-anchor="middle" dominant-baseline="central">Claude</text>
+    <text class="ts" x="498" y="396" text-anchor="middle" dominant-baseline="central">opus-4-8, streaming</text>
+  </g>
+
+  <!-- Rerank → LangGraph (cross-lane) -->
+  <path class="dashed-arr" d="M468 243 L468 340 L315 340 L315 360"/>
+
+  <!-- ── FRONTEND ── -->
+
+  <!-- SSE stream label -->
+  <text class="ts" x="338" y="514" text-anchor="middle">SSE stream</text>
+
+  <!-- Claude → React -->
+  <path class="dashed-arr" d="M498 416 L498 530 L338 530"/>
+
+  <!-- React -->
+  <g class="c-amber">
+    <rect x="122" y="516" width="216" height="56" rx="8" stroke-width="0.5"/>
+    <text class="th" x="230" y="536" text-anchor="middle" dominant-baseline="central">React (TypeScript)</text>
+    <text class="ts" x="230" y="554" text-anchor="middle" dominant-baseline="central">Answer + clickable citations</text>
+  </g>
+
+</svg>
