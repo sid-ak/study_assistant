@@ -3,7 +3,9 @@
 Short records of the significant decisions on this project, in
 [Nygard ADR](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) format:
 *context → decision → consequences*. They are the durable record of *why* the project is shaped the
-way it is. The phased build plan and structure live in [`../PLAN.md`](../PLAN.md).
+way it is. The architecture and structure live in [`../architecture.md`](../architecture.md); the
+phased build plan is tracked as
+[GitHub issues](https://github.com/sid-ak/study_assistant/issues?q=is%3Aissue%20label%3Aphase).
 
 | ADR | Decision | Status |
 |---|---|---|

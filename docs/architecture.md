@@ -5,8 +5,10 @@ Answers questions with synthesis from Claude, grounded in retrieved sources, wit
 back to the exact source slide/page.
 
 This document covers the architecture, the governance/context model, the directory layout, and the
-project-wide conventions. The phased build plan lives in [`plan.md`](plan.md); the locked decisions
-that shaped all of this are recorded as ADRs in [`decisions/`](decisions/).
+project-wide conventions. The phased build plan is tracked as
+[GitHub issues](https://github.com/sid-ak/study_assistant/issues?q=is%3Aissue%20label%3Aphase)
+(one per phase, labelled `phase`); the locked decisions that shaped all of this are recorded as
+ADRs in [`decisions/`](decisions/).
 
 ---
 
@@ -60,7 +62,7 @@ subtree; the deep "why" lives in docs referenced on demand.
   the retrieval/RRF math, eval methodology) as they firm up.
 - **`docs/decisions/` (ADRs)** — one short file per locked decision (*context → decision →
   consequences*). Durable record of *why*, survives chat-context summarization.
-- **`docs/plan.md`** — the phased build plan.
+- **GitHub issues** (label `phase`) — the phased build plan, one issue per phase.
 - **`CONTRIBUTING.md`** — human dev workflow: `uv` setup, running tests, lint/format/typecheck,
   commit + branch conventions.
 - **`README.md`** — short public-facing intro + quickstart.
@@ -91,7 +93,6 @@ study_assistant/
 ├── .github/workflows/ci.yml
 ├── docs/
 │   ├── architecture.md          # this document
-│   ├── plan.md                  # phased build plan
 │   └── decisions/               # ADRs (0001-rag-retrieval-boundary.md, …)
 ├── packages/
 │   └── rag_core/                # THE shared library — all retrieval logic
