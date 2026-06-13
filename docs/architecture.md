@@ -12,7 +12,7 @@ that shaped all of this are recorded as ADRs in [`decisions/`](decisions/).
 
 ## Architecture
 
-![RAG pipeline architecture](architecture_svg.svg)
+![RAG pipeline architecture](./assets/architecture_svg.svg)
 
 - **Orchestration:** LangGraph graph with tool use and human-in-the-loop checkpoints, backed by
   the Claude API for reasoning/synthesis.
