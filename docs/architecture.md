@@ -8,7 +8,6 @@ Records (ADRs) in [`decisions/`](decisions/).
 ## Outline
 
 - [Goals](#goals)
-- [Deployment](#deployment)
 - [Architecture](#architecture)
 - [Governance and Conventions](#governance-and-conventions)
 - [Directory](#directory)
@@ -108,7 +107,7 @@ coder or coding agent in the future.
 
 ## Directory
 
-```
+```text
 study_assistant/
 ├── AGENTS.md                    # canonical agent context — entry point, project one-liner
 ├── CLAUDE.md                    # import stub (@AGENTS.md) — Claude Code alias
