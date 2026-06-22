@@ -22,6 +22,14 @@ everything **on machine, offline, and for free**. Embeddings and the cross-encod
 so there are no per-call API costs and no network dependency for retrieval and because nothing
 transits to a vendor, the corpus stays private.
 
+> **NOTE**  
+> "Offline and for free" scopes to ingestion and retrieval, which run entirely on-machine.
+> Generation is the one exception: it calls Claude (`claude-opus-4-8`) through the Anthropic API, a
+> hosted, paid, online dependency. The model-agnostic goal therefore applies _below_ the reasoning
+> layer — the embedder, reranker, and coding agent are swappable, while the reasoning model is
+> deliberately Claude-coupled for synthesis quality. A path to closing that gap is in
+> [Future Scope](#future-scope).
+
 Domain-level goals that shaped the architecture also include keeping a human in the loop (HITL) to
 steer an ambiguous question before a slow rerank runs over the wrong material, keeping the reasoning
 model swappable rather than foundational, and keeping the reasoning layer ignorant of where chunks
@@ -168,14 +176,26 @@ study_assistant/
 
 ## Future Scope
 
+### Model Agnostic
+
+A **hybrid local/Claude generation** approach would extend the model-agnostic goal through the
+reasoning layer and make a fully free, offline run possible end-to-end. The generation node would
+sit behind a small interface — the same pattern already used for the embedder and reranker — so
+config selects the model per run: a local model served through an OpenAI-compatible runtime (Ollama,
+llama.cpp, or vLLM) as the free default, with Claude reserved for harder questions where synthesis
+quality matters most.
+
+### Cloud Deployable
+
 A **cloud-deployable** path is the natural next step beyond local: it would add managed Postgres, a
 registry push, and prod-vs-local config. The heavier lift there is the local `bge` models, which are
 expensive to host in the cloud — so a future cloud move may also revisit the embedding/reranking
 stack (e.g. a hosted pairing like Voyage's `voyage-3` + `rerank-2.5`), a change gated by the
 pgvector `vector(N)` dimension lock-in and therefore a re-embed plus schema migration.
 
-> **NOTE**  
-> To avoid a future rewrite, the schema carries a **`user_id` seam** — a `user_id` column on the
-> relevant tables, defaulted for the single local user — so authentication and per-user isolation
-> can be layered on later by populating the seam and adding an auth layer, rather than reshaping the
-> data model.
+### Multi User Auth
+
+To avoid a future rewrite, the schema carries a **`user_id` seam** — a `user_id` column on the
+relevant tables, defaulted for the single local user — so authentication and per-user isolation can
+be layered on later by populating the seam and adding an auth layer, rather than reshaping the data
+model.
