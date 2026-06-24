@@ -5,9 +5,9 @@
 
 ## Context
 
-Course materials (slides, papers, notes) need to get into the system: parsed, semantically
-chunked, embedded, and stored in pgvector. How documents enter shapes early architecture. Two
-primary approaches were considered:
+Course materials (slides, papers, notes) need to get into the system: parsed, semantically chunked,
+embedded, and stored in pgvector. How documents enter shapes early architecture. Two primary
+approaches were considered:
 
 1. **CLI batch** — a command points at a folder and runs the pipeline. Best fit for a personal
    corpus the user controls on disk; re-runnable and scriptable, and it needs no upload UI or job
@@ -28,13 +28,17 @@ The CLI is its **own top-level package** (`cli/`, exposing the `study` console-s
 on `rag_core` as a workspace dependency — it is a thin entry point over the library, kept separate
 from it rather than bundled inside.
 
+A **light UI ingestion path is the planned follow-on**, not a rejected option: it is deferred to a
+later phase rather than declined, and will reuse the same `rag_core` pipeline rather than introduce
+a second one. CLI-first is the order of work, not a decision to remain CLI-only.
+
 ## Consequences
 
 - **No upload UI, queue, or worker** is needed early; ingestion is a script over `rag_core`, so the
   first working phases stay lean and focused on retrieval.
 - Ingestion is **idempotent and re-runnable**, which suits a corpus that grows as courses progress.
-- Because all ingestion logic lives in `rag_core` (per
-  [ADR 0001](0001-rag-retrieval-boundary.md)), a **UI upload route can be added in a later phase**
-  that reuses the exact same pipeline — the CLI-first choice does not foreclose it.
+- Because all ingestion logic lives in `rag_core` (per [ADR 0001](0001-rag-retrieval-boundary.md)),
+  the **planned light UI upload route in a later phase** reuses the exact same pipeline — the
+  CLI-first choice sets up that follow-on rather than foreclosing it.
 - The CLI being a **separate package** keeps the library's surface clean and lets the ingestion
   entry point evolve (flags, batching, progress) without touching `rag_core`.

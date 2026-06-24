@@ -10,9 +10,9 @@ authentication and multi-tenancy exist as concerns at all. Three options were co
 
 1. **Local single-user** — runs on the developer's machine via Docker Compose; one user, no auth,
    secrets via `.env`. Simplest; CI builds and tests images but does not deploy.
-2. **Cloud-deployable, single-user** — same single-user model but designed to deploy to a cloud
-   host (managed Postgres, registry push, prod vs. local config). More infra surface — and the
-   local `bge` models are heavy to host in the cloud anyway (see
+2. **Cloud-deployable, single-user** — same single-user model but designed to deploy to a cloud host
+   (managed Postgres, registry push, prod vs. local config). More infra surface — and the local
+   `bge` models are heavy to host in the cloud anyway (see
    [ADR 0002](0002-local-embedding-and-reranking.md)).
 3. **Multi-user with auth** — per-user corpora and authentication from day one. The most
    infrastructure: an auth layer, per-user data isolation, and user migrations. Overkill for a
@@ -20,12 +20,12 @@ authentication and multi-tenancy exist as concerns at all. Three options were co
 
 ## Decision
 
-Adopt **local single-user**: the system runs on the developer's machine via Docker Compose, with
-no authentication and secrets supplied through `.env`. A single corpus, a single user.
+Adopt **local single-user**: the system runs on the developer's machine via Docker Compose, with no
+authentication and secrets supplied through `.env`. A single corpus, a single user.
 
-To avoid a future rewrite, the database schema keeps a **`user_id` seam** (a `user_id` column on
-the relevant tables, defaulted for the single local user) so authentication and per-user isolation
-can be layered on later without restructuring the data model — but none of that is built now.
+To avoid a future rewrite, the database schema keeps a **`user_id` seam** (a `user_id` column on the
+relevant tables, defaulted for the single local user) so authentication and per-user isolation can
+be layered on later without restructuring the data model — but none of that is built now.
 
 ## Consequences
 
