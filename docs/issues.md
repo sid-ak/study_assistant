@@ -7,7 +7,7 @@
 
 | #   | Title | State | Labels | Parent |
 | --- | ----- | ----- | ------ | ------ |
-| 1 | Phase 0 — Foundations | open | phase |  |
+| 1 | Phase 0 — Foundations | closed | phase |  |
 | 2 | Phase 1 — Storage + schema (rag_core/store) | open | phase |  |
 | 3 | Phase 2 — Ingestion + CLI (rag_core/ingest + cli/) | open | phase |  |
 | 4 | Phase 3 — Embeddings + dense retrieval (rag_core/embed) | open | phase |  |
