@@ -15,3 +15,4 @@ The Issue column is the leading number of the branch name, which must be the Git
 | Date       | Branch          | Issue | Checkpoint                                                                                                                                          |
 | ---------- | --------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-06-26 | `1-foundations` | 1     | Repo skeleton + governance files, `uv` workspace with `packages/rag_core`, Postgres + pgvector dev stack via `docker compose`, and pre-commit + CI. |
+| 2026-06-27 | `1-foundations` | 1 | #1 Phase 0 — Foundations: uv workspace, pgvector stack, and CI |
