@@ -2,11 +2,11 @@
 
 ## Summary
 
-## Motivation & context
+## Motivation
 
 ## Changes
 
-## Type of change
+## Type
 
 - [ ] Bug
 - [ ] Feature

@@ -1,6 +1,3 @@
-.claude
-issues.md
-
 # ---- Secrets / environment ----
 .env
 .env.*
