@@ -63,19 +63,19 @@ in one Postgres instance is simpler and keeps the footprint to a single containe
 
 ## Decision
 
-- **Python**: One language across the ML core and the web tier.
-- **FastAPI**: Minimal, typed, async-native (ASGI/Uvicorn), SSE streaming via `StreamingResponse`.
-- **React**: State-driven streaming render.
-- **PostgreSQL + pgvector**: Single store for chunk text, metadata, vectors, and agent state.
+- Python: One language across the ML core and the web tier.
+- FastAPI: Minimal, typed, async-native (ASGI/Uvicorn), SSE streaming via `StreamingResponse`.
+- React: State-driven streaming render.
+- PostgreSQL + pgvector: Single store for chunk text, metadata, vectors, and agent state.
 
 ## Consequences
 
-- **One Language**: Shared across the MCP server and API without a cross-runtime boundary.
-- **First-Class Streaming:** FastAPI yields tokens over SSE and React renders them incrementally.
+- One Language: Shared across the MCP server and API without a cross-runtime boundary.
+- First-Class Streaming: FastAPI yields tokens over SSE and React renders them incrementally.
   - Additionally, the browser's native `EventSource` API is `GET` only, but the agent must receive a
     JSON payload (prompt plus chat history) on a `POST`.
   - React therefore enables consuming the stream over the `fetch` API with a `ReadableStream` (for
     example, Vercel AI SDK's `useChat`).
-- **One Database**: Avoids synchronization and footprint limited to one container.
-- **Well Supported**: Lowers operational risk, novel parts of the project sit on top of a proven
+- One Database: Avoids synchronization and footprint limited to one container.
+- Well Supported: Lowers operational risk, novel parts of the project sit on top of a proven
   foundation by design.
