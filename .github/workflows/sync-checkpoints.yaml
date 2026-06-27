@@ -1,0 +1,59 @@
+name: Sync checkpoints log
+
+# Append a row to docs/checkpoints.md for major iterations:
+#  - a merged PR that closes a `phase`-labeled issue, or
+#  - a push whose head commit message is `#<number>-checkpoint: <text>`.
+on:
+  pull_request:
+    types: [closed]
+  push:
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+
+# Shared group with sync-issues so the two doc-sync workflows never push to the default
+# branch at the same time (merging a phase PR fires both `issues` and `pull_request`).
+concurrency:
+  group: repo-docs-sync
+  cancel-in-progress: false
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    # Only act on a merged PR, or a push whose head commit looks like `#<n>-checkpoint:`.
+    # `contains` is a coarse gate; checkpoint.py validates the exact `#<n>-checkpoint:` shape.
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '-checkpoint:'))
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Always commit the log to the default branch (dev), regardless of trigger.
+          # The row's Branch column still records the work branch (PR head / pushed ref).
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Append checkpoint row (if applicable)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BRANCH: ${{ github.ref_name }}
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: python3 .github/scripts/checkpoint.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- docs/checkpoints.md; then
+            echo "No checkpoint change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/checkpoints.md
+          git commit -m "chore: append checkpoint to docs/checkpoints.md [skip ci]"
+          git push
