@@ -4,8 +4,6 @@
 
 ## Motivation
 
-## Changes
-
 ## Type
 
 - [ ] Bug
