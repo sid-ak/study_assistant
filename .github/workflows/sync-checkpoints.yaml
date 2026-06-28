@@ -28,7 +28,7 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '-checkpoint:'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # Always commit the log to the default branch (dev), regardless of trigger.
           # The row's Branch column still records the work branch (PR head / pushed ref).
