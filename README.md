@@ -1,8 +1,8 @@
 # Study Assistant
 
-A local, single-user RAG study assistant over course materials (lecture slides, papers, notes).
-It answers questions with synthesis from Claude, grounded in retrieved sources, with citations back
-to the exact source slide or page. Ingestion and retrieval run entirely on-machine, offline, and for
+A local, single-user RAG study assistant over course materials (lecture slides, papers, notes). It
+answers questions with synthesis from Claude, grounded in retrieved sources, with citations back to
+the exact source slide or page. Ingestion and retrieval run entirely on-machine, offline, and for
 free; only answer generation calls the Anthropic API.
 
 - Design: [`docs/architecture.md`](docs/architecture.md)
