@@ -14,3 +14,4 @@ phased build plan is tracked as
 | [0002](0002-local-embedding-and-reranking.md) | Embedding and reranking stack: local open-source models | Accepted |
 | [0003](0003-local-single-user-scope.md)       | Deployment scope: local single-user                     | Accepted |
 | [0004](0004-cli-batch-ingestion.md)           | Document ingestion: CLI batch                           | Accepted |
+| [0005](0005-documentation-tooling.md)         | Documentation site tooling: Sphinx, MyST, and Furo      | Accepted |

@@ -1,0 +1,47 @@
+name: Deploy docs
+
+# Build the Sphinx site and publish it to GitHub Pages on push to main or dev. Kept separate from
+# ci.yaml (like sync-issues / sync-checkpoints) so CI stays build-and-test only, with no deploy.
+on:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel an in-flight Pages deploy; let queued runs finish in order.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync
+
+      - name: Build site
+        run: uv run sphinx-build -b html docs site -W
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

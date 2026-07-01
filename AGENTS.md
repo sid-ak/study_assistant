@@ -1,87 +1,90 @@
 # Study Assistant — Agent Context
 
-A local, single-user RAG study assistant over course materials (slides, papers, notes). It
-answers questions with synthesis from Claude, grounded in retrieved sources, with citations back to
-the exact source slide/page. Ingestion and retrieval run entirely on-machine; only generation calls
-the Anthropic API.
+A local, single-user RAG study assistant over course materials (slides, papers, notes). It answers
+questions with synthesis from Claude, grounded in retrieved sources, with citations back to the
+exact source slide/page. Ingestion and retrieval run entirely on-machine; only generation calls the
+Anthropic API.
 
-Start here: [`docs/architecture.md`](docs/architecture.md) is the full design. Locked decisions
-live as ADRs in [`docs/decisions/`](docs/decisions/). Work is tracked as phases in
-[`docs/issues.md`](docs/issues.md).
+## Getting Oriented
 
-## Resuming work (fresh agent)
-
-To pick up where the project was left off — whether between phases or mid-phase — orient in this
-order. Docs (1–3) state intent; repo metadata (4) is the ground truth and is what reveals progress
-made within or between phases. If they disagree, trust the tree and git, then update the docs.
-
-1. General context — read [`docs/architecture.md`](docs/architecture.md) (target design) and
-   [`docs/decisions/`](docs/decisions/) (ADRs — locked decisions and constraints) to understand the
-   system and why it is the way it is.
-2. `README.md` → Status and [`docs/checkpoints.md`](docs/checkpoints.md) — the quickest read
-   of the current phase, plus an append-only table of every major iteration (branch, phase,
-   checkpoint) showing how the project got here.
-3. [`docs/issues.md`](docs/issues.md) — the phase roadmap: closed phases are done, the
-   lowest-numbered open phase is next up, and child rows flag in-flight improvements.
-4. Repo metadata (ground truth) — confirm the docs against reality; this also exposes work done
-   within or between phases:
-   - Branch name (e.g. `4-embeddings`) — usually names the active phase.
-   - `git log` plus staged/unstaged changes — the most recent real work and anything in
-     progress.
-   - Actual tree — which packages/modules exist versus the architecture's target layout.
-   - `uv sync` then `uv run pytest` — install the workspace and run the tests to see what is
-     actually implemented and passing.
-
-[`docs/checkpoints.md`](docs/checkpoints.md) is appended automatically — by the `sync-checkpoints`
-workflow on phase-PR merges and `checkpoint:` commits (see `CONTRIBUTING.md`); do not hand-edit it.
-At every major iteration still update the manual living docs so the next agent can resume cleanly:
-the `README.md` Status blurb and the "Workspace layout" section below. Name
-branches starting with their GitHub issue number (e.g. `1-foundations` for issue #1) so checkpoints
-attribute correctly.
+- Read [`docs/architecture.md`](docs/architecture.md), it is the full design.
+- Read ADRs under [`docs/decisions/`](docs/decisions/), locked decisions live there.
+- Read [`docs/issues.md`](docs/issues.md), work is tracked as phases there.
+- Read [`docs/checkpoints.md`](docs/checkpoints.md), completed work is tracked there.
+- Read [`README.md`](README.md), Status blurb states intent.
+- Compare against repo, which is the ground truth.
+  - Scan with `ls` and compare with directory structure in `architecture.md` to gauge progress.
+  - Use `git log` to reveal further current progress whether in between phases or mid-phase.
+- Fetch the current issue being worked on from the GitHub repo, read its full content.
+  - Also read the full content of the current issue's sub issues (if any).
 
 ## Governance model
 
 Canonical context lives in `AGENTS.md` files (tool-neutral). Each `CLAUDE.md` is a one-line
 `@AGENTS.md` import stub so Claude Code's directory-walk loading picks up the same content. Edit
 `AGENTS.md`, never the stub. Each package/service carries its own scoped `AGENTS.md` describing its
-surface; this one is the root entry point.
+surface; agents read the nearest file in the tree, so the closest one wins. This file is the root
+entry point — keep package-specific detail in the package's own `AGENTS.md`.
 
-## Primary conventions (enforced)
+## Dev environment tips
 
-- Retrieval lives only in `rag_core`. The MCP server and API are consumers, never reimplementers
-  ([ADR 0001](docs/decisions/0001-rag-retrieval-boundary.md)).
-- Lazy model loading: no `torch` import at module top-level outside `embed/` and `rerank/`
-  ([ADR 0002](docs/decisions/0002-local-embedding-and-reranking.md)).
-- Embedder/reranker behind a small interface so the system is agnostic to the concrete model;
-  the only hard lock-in is the pgvector embedding dimension (`vector(N)`).
-- Secrets via `.env` (documented in `.env.example`), single local user, no auth
-  ([ADR 0003](docs/decisions/0003-local-single-user-scope.md)).
-- Never commit; only stage. Do not run `git commit`. At the end of a set of changes, `git add`
-  the relevant files and leave them staged for the human to review and commit — but only if there
-  are currently 0 staged files. If anything is already staged, do not stage at all; leave the
-  working tree as-is for the human.
+- Python 3.12 on a `uv` workspace. Run `uv sync` once to resolve and install every workspace member
+  (root + `packages/*`) into a single `.venv`.
+- Run tools through the workspace venv with `uv run <cmd>` (e.g. `uv run pytest`); do not call a
+  global `python`/`pip`.
+- Add a runtime dependency by editing the owning package's `pyproject.toml` `dependencies`, then
+  `uv sync`. Add a dev/test-only tool to the root `[dependency-groups] dev` instead.
+- Bring up the store with `docker compose up -d` (PostgreSQL + pgvector). Copy `.env.example` to
+  `.env` first — the connection string and secrets live there. The DB is required for the store
+  layer and its tests.
+- New workspace members go under `packages/` (libraries) or top-level (`cli/`, `services/`,
+  `apps/web/`) per `docs/architecture.md`; each gets its own scoped `AGENTS.md` plus a one-line
+  `CLAUDE.md` stub (`@AGENTS.md`).
+- Install hooks once with `pre-commit install`; `pre-commit run --all-files` runs lint + format +
+  typecheck across the tree.
 
-## Stack & tooling
+## Testing instructions
 
-- Python 3.12, `uv` workspace. Lint/format (`ruff`) and typecheck (`mypy`) run in pre-commit and
-  CI.
-- PostgreSQL + pgvector is the single store, stood up via `docker compose`.
-- Models: Claude via the Anthropic SDK (`claude-opus-4-8`); `bge-m3` embeddings and
-  `bge-reranker-v2-m3` reranking run in-process.
+- The CI plan is in `.github/workflows/ci.yaml`: a `checks` job (ruff lint, ruff format check, mypy,
+  pytest against a pgvector service) and a `docs` job that builds the Sphinx site
+  (`uv run sphinx-build -b html docs site -W`, build-only — deployment lives in `docs-deploy.yaml`).
+- Run the whole suite with `uv run pytest`. Integration tests need the database — run
+  `docker compose up -d` first or they fail to connect.
+- Integration tests are marked `@pytest.mark.integration`. Scope a run with
+  `uv run pytest -m "not integration"` (fast, no DB) or `-m integration` (DB-backed); target one
+  test with `uv run pytest -k "<name>"`.
+- Lint, format, and typecheck must also be green:
+  `uv run ruff check . && uv run ruff format --check . && uv run mypy`. Fix every error and type
+  failure until the whole suite is green before you merge.
+- Docs must build clean: `uv run sphinx-build -b html docs site -W` (CI runs this too — `-W` turns
+  Sphinx warnings into errors, catching broken toctrees, anchors, and autodoc import failures).
+- Add or update tests for the code you change, even if nobody asked.
+- Schema changes need a fresh DB: `initialize_schema()` is `CREATE ... IF NOT EXISTS` and will not
+  retrofit constraints, so run `docker compose down -v && docker compose up -d` after editing
+  `store/schema.py`.
 
-## Workspace layout
+## Code style
 
-The repo is built phase by phase (see `docs/issues.md`). Today the workspace contains the root and
-`packages/rag_core/` (the shared retrieval library — the foundation everything else depends on).
-`cli/`, `services/`, and `apps/web/` are added in their respective phases; the target tree is
-documented in `docs/architecture.md`.
+- `ruff` formats and lints (line length 100, rule set `E,F,I,UP,B`); `mypy` runs in `strict` mode.
+  Both must pass — do not silence them without cause.
+- Type every function signature; `mypy --strict` rejects untyped defs. Prefer explicit, narrow types
+  over `Any`.
 
-## Common commands
+## Binding decisions (ADRs)
 
-```sh
-uv sync                       # resolve + install the workspace
-docker compose up -d          # start Postgres + pgvector
-pre-commit install            # enable hooks
-pre-commit run --all-files    # lint + format + typecheck
-uv run pytest                 # run tests
-```
+The locked architectural decisions are recorded as ADRs, indexed in
+[`docs/decisions/`](docs/decisions/). They are binding and the source of truth — read the relevant
+ADR before changing what it governs, and do not restate its rules here.
+
+## PR instructions
+
+- Branch from `dev`, naming the branch with its GitHub issue number first (e.g. `4-embeddings` for
+  issue #4) so `docs/checkpoints.md` attributes correctly.
+- PR title format: `[<phase or package>] <Title>` — e.g. `[rag_core/store] Add schema + CRUD`.
+- Run the full gate green before handing off (with `docker compose up -d`):
+  `uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest && uv run sphinx-build -b html docs site -W`.
+- Update the `README.md` Status blurb in the same change — current status lives there (and in
+  `docs/issues.md` / `docs/checkpoints.md`), not in this file.
+- Never commit; only stage. Do not run `git commit`. At the end of a set of changes, `git add` the
+  relevant files and leave them staged for the human to review — but only if 0 files are currently
+  staged. If anything is already staged, do not stage at all; leave the working tree as-is.

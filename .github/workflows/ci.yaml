@@ -32,3 +32,23 @@ jobs:
 
       - name: Pytest
         run: uv run pytest
+
+  docs:
+    name: Docs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync
+
+      # Build-only (no deploy) so every push/PR is checked the same way as lint/mypy/pytest.
+      # -W turns Sphinx warnings into errors. Deployment to Pages stays in docs-deploy.yaml.
+      - name: Build docs
+        run: uv run sphinx-build -b html docs site -W
