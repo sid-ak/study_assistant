@@ -17,11 +17,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Build and upload the Pages artifact in its own job so it is produced exactly once. If the deploy
+  # job below fails transiently and is re-run, it does not re-upload — which would otherwise leave two
+  # "github-pages" artifacts in the run and make actions/deploy-pages error.
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
 
@@ -42,6 +42,13 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
