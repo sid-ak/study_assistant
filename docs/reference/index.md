@@ -1,7 +1,7 @@
 # API Reference
 
-Generated from docstrings and the `mypy --strict` type hints by Sphinx autodoc
-(see [ADR 0005](../decisions/0005-documentation-tooling.md)). One directive block per module, so the
+Generated from docstrings and the `mypy --strict` type hints by Sphinx autodoc (see
+[ADR 0005](../decisions/0005-documentation-tooling.md)). One directive block per module, so the
 reference stays navigable rather than one giant page.
 
 ## rag_core

@@ -6,9 +6,9 @@
 ## Context
 
 The narrative docs (`architecture.md`, ADRs, `issues.md`, `checkpoints.md`) are already a
-Markdown-only, docs-as-code tree. Once `rag_core` carries real typed modules (`config.py`,
-`store/`, and later `ingest/`, `embed/`, `rerank/`, `retrieve/`), a second need shows up: a browsable
-API reference generated from docstrings and the `mypy --strict` type hints already required by
+Markdown-only, docs-as-code tree. Once `rag_core` carries real typed modules (`config.py`, `store/`,
+and later `ingest/`, `embed/`, `rerank/`, `retrieve/`), a second need shows up: a browsable API
+reference generated from docstrings and the `mypy --strict` type hints already required by
 `AGENTS.md`, rather than hand-written and prone to drifting from the code. Both halves — narrative
 and generated reference — are wanted in one static site, deployed the same way the rest of the
 project's automation works (a GitHub Actions workflow, alongside `sync-issues` and
@@ -49,25 +49,26 @@ Several tool families were considered:
    single-user, single-corpus project (per [ADR 0003](0003-local-single-user-scope.md)) has no use
    for.
 5. **Quarto.** A strong fit on paper given the project's ML/RAG content — it can execute Python code
-   blocks live, which could embed real retrieval/generation output in the docs. Rejected for now:
-   it is a separate non-Python binary/runtime (not a `uv` dev dependency), its docstring-to-reference
-   story (`quartodoc`) is newer and far less mature than `autodoc`, and the live-execution capability
-   is a genuine future enhancement rather than a current need. Worth reconsidering under a
-   documentation "Future Scope" once retrieval/generation exist to demonstrate.
-6. **Sphinx, with a modern theme (PyData Sphinx Theme, Sphinx Book Theme, or Furo).** The long-standing
-   Python documentation standard, multi-maintainer governed with no comparable fork history, and
-   `autodoc` integrates directly with docstrings and type hints. Historically dated default styling,
-   but that is a theme problem, not a Sphinx problem — solved by pairing it with a modern theme.
+   blocks live, which could embed real retrieval/generation output in the docs. Rejected for now: it
+   is a separate non-Python binary/runtime (not a `uv` dev dependency), its docstring-to-reference
+   story (`quartodoc`) is newer and far less mature than `autodoc`, and the live-execution
+   capability is a genuine future enhancement rather than a current need. Worth reconsidering under
+   a documentation "Future Scope" once retrieval/generation exist to demonstrate.
+6. **Sphinx, with a modern theme (PyData Sphinx Theme, Sphinx Book Theme, or Furo).** The
+   long-standing Python documentation standard, multi-maintainer governed with no comparable fork
+   history, and `autodoc` integrates directly with docstrings and type hints. Historically dated
+   default styling, but that is a theme problem, not a Sphinx problem — solved by pairing it with a
+   modern theme.
 
 ## Decision
 
-Adopt **Sphinx** with **`myst-parser`** (so the existing all-Markdown `docs/` tree needs no rewrite),
-**`autodoc`** plus **`sphinx-autodoc-typehints`** for the generated API reference, and **Furo** as the
-theme. Furo over PyData Sphinx Theme or Sphinx Book Theme specifically: PyData's version-switcher and
-multi-project chrome targets scientific-package ecosystems this project doesn't have, and Sphinx Book
-Theme leans toward long-form, Jupyter-book-style scientific text; Furo is minimal, actively
-maintained, and closest in spirit to the clean single-project developer-tool look the MkDocs +
-Material setup was chosen for in the first place.
+Adopt **Sphinx** with **`myst-parser`** (so the existing all-Markdown `docs/` tree needs no
+rewrite), **`autodoc`** plus **`sphinx-autodoc-typehints`** for the generated API reference, and
+**Furo** as the theme. Furo over PyData Sphinx Theme or Sphinx Book Theme specifically: PyData's
+version-switcher and multi-project chrome targets scientific-package ecosystems this project doesn't
+have, and Sphinx Book Theme leans toward long-form, Jupyter-book-style scientific text; Furo is
+minimal, actively maintained, and closest in spirit to the clean single-project developer-tool look
+the MkDocs + Material setup was chosen for in the first place.
 
 The MkDocs-based setup (`mkdocs.yml`, the `mkdocstrings` reference page, the mkdocs deploy workflow,
 and the corresponding dev dependencies) is removed rather than kept as a fallback — there is no
@@ -77,12 +78,12 @@ production site depending on it yet, so this is the cheapest point at which to s
 
 - No second point of failure from a single maintainer's roadmap: Sphinx has a core-developer team
   with shared commit access, and no history comparable to the MkDocs 2.0 situation.
-- Stays inside the `uv` Python workspace as a dev dependency, consistent with keeping the ML core and
-  its tooling in one language and one workspace ([ADR 0000](0000-stack.md)) — no Node runtime (as
-  Starlight/VitePress/Docusaurus would require) or separate binary (as Quarto would require) enters
-  the toolchain.
-- `myst-parser` means `architecture.md`, the ADRs, `issues.md`, and `checkpoints.md` are wired into a
-  Sphinx `toctree` as-is; no content is rewritten into reStructuredText.
+- Stays inside the `uv` Python workspace as a dev dependency, consistent with keeping the ML core
+  and its tooling in one language and one workspace ([ADR 0000](0000-stack.md)) — no Node runtime
+  (as Starlight/VitePress/Docusaurus would require) or separate binary (as Quarto would require)
+  enters the toolchain.
+- `myst-parser` means `architecture.md`, the ADRs, `issues.md`, and `checkpoints.md` are wired into
+  a Sphinx `toctree` as-is; no content is rewritten into reStructuredText.
 - Gives up things this project doesn't currently need: Docusaurus-grade versioning/i18n, Starlight's
   zero-client-JS search speed, and Quarto's live code execution. Quarto in particular is a candidate
   to revisit later, under a documentation "Future Scope," once retrieval/generation output exists to
