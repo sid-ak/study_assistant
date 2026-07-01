@@ -171,6 +171,10 @@ study_assistant/
     └── postgres/                # pgvector init.sql, model-weights volume notes
 ```
 
+> NOTE  
+> The Python packages are documented on a Sphinx + MyST + Furo site (`docs/conf.py`, deployed by
+> `.github/workflows/docs-deploy.yaml`; see [ADR 0005](decisions/0005-documentation-tooling.md)).
+
 ## Future Scope
 
 ### Model Agnostic

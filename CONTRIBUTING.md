@@ -18,10 +18,13 @@ pre-commit install      # installs the git hooks
   ```sh
   pre-commit run --all-files
   uv run pytest
+  uv run sphinx-build -b html docs site -W
   ```
 
-- CI (`.github/workflows/ci.yaml`) runs the same checks on every push and pull request. It builds
-  and tests, but does not deploy (see [ADR 0003](docs/decisions/0003-local-single-user-scope.md)).
+- CI (`.github/workflows/ci.yaml`) runs the same checks on every push and pull request, plus a docs
+  build (`sphinx-build ... -W`). It builds and tests, but does not deploy (see
+  [ADR 0003](docs/decisions/0003-local-single-user-scope.md)); the docs site is deployed separately
+  by `.github/workflows/docs-deploy.yaml`.
 
 ## Branches & Commits
 

@@ -66,6 +66,9 @@ pgdata/
 *.log
 logs/
 
+# ---- Docs site (sphinx-build output) ----
+site/
+
 # ---- Editors / OS ----
 .idea/
 .vscode/

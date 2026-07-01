@@ -45,8 +45,9 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
 
 ## Testing instructions
 
-- The CI plan is in `.github/workflows/ci.yaml`: it runs ruff lint, ruff format check, mypy, then
-  pytest against a pgvector service.
+- The CI plan is in `.github/workflows/ci.yaml`: a `checks` job (ruff lint, ruff format check, mypy,
+  pytest against a pgvector service) and a `docs` job that builds the Sphinx site
+  (`uv run sphinx-build -b html docs site -W`, build-only — deployment lives in `docs-deploy.yaml`).
 - Run the whole suite with `uv run pytest`. Integration tests need the database — run
   `docker compose up -d` first or they fail to connect.
 - Integration tests are marked `@pytest.mark.integration`. Scope a run with
@@ -55,6 +56,8 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
 - Lint, format, and typecheck must also be green:
   `uv run ruff check . && uv run ruff format --check . && uv run mypy`. Fix every error and type
   failure until the whole suite is green before you merge.
+- Docs must build clean: `uv run sphinx-build -b html docs site -W` (CI runs this too — `-W` turns
+  Sphinx warnings into errors, catching broken toctrees, anchors, and autodoc import failures).
 - Add or update tests for the code you change, even if nobody asked.
 - Schema changes need a fresh DB: `initialize_schema()` is `CREATE ... IF NOT EXISTS` and will not
   retrofit constraints, so run `docker compose down -v && docker compose up -d` after editing
@@ -79,7 +82,7 @@ ADR before changing what it governs, and do not restate its rules here.
   issue #4) so `docs/checkpoints.md` attributes correctly.
 - PR title format: `[<phase or package>] <Title>` — e.g. `[rag_core/store] Add schema + CRUD`.
 - Run the full gate green before handing off (with `docker compose up -d`):
-  `uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest`.
+  `uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest && uv run sphinx-build -b html docs site -W`.
 - Update the `README.md` Status blurb in the same change — current status lives there (and in
   `docs/issues.md` / `docs/checkpoints.md`), not in this file.
 - Never commit; only stage. Do not run `git commit`. At the end of a set of changes, `git add` the
