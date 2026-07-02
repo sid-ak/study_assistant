@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+# CodeRabbit runs as a GitHub App (no workflow file); this file only tunes its reviews.
+# Reference: https://docs.coderabbit.ai/reference/configuration
+language: en-US
+
+reviews:
+  profile: chill # fewer, higher-signal comments (the alternative is "assertive")
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches: [".*"]
+  path_instructions:
+    - path: "**/*.py"
+      instructions: >-
+        Python 3.12, typed under `mypy --strict` and linted by ruff (rules E,F,I,UP,B,
+        line length 100). Enforce the project conventions in AGENTS.md and docs/decisions:
+        retrieval logic lives only in `rag_core`; no top-level `torch` import outside
+        `embed/` and `rerank/`; relevant tables carry the defaulted `user_id` column.
+
+tools:
+  ruff:
+    enabled: true
