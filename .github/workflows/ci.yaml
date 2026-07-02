@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main, dev]
   pull_request:
 
 # Builds and tests only — no deploy (ADR 0003: local single-user scope).
