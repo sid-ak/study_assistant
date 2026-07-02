@@ -5,14 +5,12 @@
 
 ## Context
 
-The narrative docs (`architecture.md`, ADRs, `issues.md`, `checkpoints.md`) are already a
-Markdown-only, docs-as-code tree. Once `rag_core` carries real typed modules (`config.py`, `store/`,
-and later `ingest/`, `embed/`, `rerank/`, `retrieve/`), a second need shows up: a browsable API
-reference generated from docstrings and the `mypy --strict` type hints already required by
-`AGENTS.md`, rather than hand-written and prone to drifting from the code. Both halves — narrative
-and generated reference — are wanted in one static site, deployed the same way the rest of the
-project's automation works (a GitHub Actions workflow, alongside `sync-issues` and
-`sync-checkpoints`).
+The narrative docs (`architecture.md` and the ADRs) are already a Markdown-only, docs-as-code tree.
+Once `rag_core` carries real typed modules (`config.py`, `store/`, and later `ingest/`, `embed/`,
+`rerank/`, `retrieve/`), a second need shows up: a browsable API reference generated from docstrings
+and the `mypy --strict` type hints already required by `AGENTS.md`, rather than hand-written and
+prone to drifting from the code. Both halves — narrative and generated reference — are wanted in one
+static site, deployed by a GitHub Actions workflow like the rest of the project's automation.
 
 An initial pass adopted MkDocs + `mkdocstrings` + Material for MkDocs and got as far as a working
 `mkdocs.yml`, a generated API reference page, and a deploy workflow. That work surfaced a governance
@@ -82,8 +80,8 @@ production site depending on it yet, so this is the cheapest point at which to s
   and its tooling in one language and one workspace ([ADR 0000](0000-stack.md)) — no Node runtime
   (as Starlight/VitePress/Docusaurus would require) or separate binary (as Quarto would require)
   enters the toolchain.
-- `myst-parser` means `architecture.md`, the ADRs, `issues.md`, and `checkpoints.md` are wired into
-  a Sphinx `toctree` as-is; no content is rewritten into reStructuredText.
+- `myst-parser` means `architecture.md` and the ADRs are wired into a Sphinx `toctree` as-is; no
+  content is rewritten into reStructuredText.
 - Gives up things this project doesn't currently need: Docusaurus-grade versioning/i18n, Starlight's
   zero-client-JS search speed, and Quarto's live code execution. Quarto in particular is a candidate
   to revisit later, under a documentation "Future Scope," once retrieval/generation output exists to
@@ -91,6 +89,5 @@ production site depending on it yet, so this is the cheapest point at which to s
 - Some Sphinx configuration and cross-referencing (`conf.py`, roles like `:py:class:`) is still
   reST-flavored under the hood even though page content is authored in Markdown — an accepted
   friction in exchange for governance stability and native `autodoc`/type-hint integration.
-- Deployment follows the same pattern as the rest of the project's automation: a GitHub Actions
-  workflow builds the site and publishes to GitHub Pages, split out from `ci.yaml` the same way
-  `sync-issues` and `sync-checkpoints` already are.
+- Deployment is a GitHub Actions workflow that builds the site and publishes to GitHub Pages, kept
+  as its own workflow rather than a job in `ci.yaml`.
