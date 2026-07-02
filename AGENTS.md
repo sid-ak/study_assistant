@@ -9,7 +9,8 @@ Anthropic API.
 
 - Read [`docs/architecture.md`](docs/architecture.md), it is the full design.
 - Read ADRs under [`docs/decisions/`](docs/decisions/), locked decisions live there.
-- Read the [GitHub issues](https://github.com/sid-ak/study_assistant/issues), work is tracked as phases there.
+- Read the [GitHub issues](https://github.com/sid-ak/study_assistant/issues), work is tracked as
+  phases there.
 - Read [`README.md`](README.md), Status blurb states intent.
 - Compare against repo, which is the ground truth.
   - Scan with `ls` and compare with directory structure in `architecture.md` to gauge progress.
@@ -52,6 +53,10 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
 - Integration tests are marked `@pytest.mark.integration`. Scope a run with
   `uv run pytest -m "not integration"` (fast, no DB) or `-m integration` (DB-backed); target one
   test with `uv run pytest -k "<name>"`.
+- Integration tests run against a separate database (`TEST_DATABASE_URL`, e.g.
+  `study_assistant_test`), never the app's `DATABASE_URL`, and truncate their tables between tests.
+  `docker compose up -d` remains the only setup step — the test database is created automatically by
+  `infra/postgres/init.sql` on first init, so a fresh clone needs nothing extra.
 - Lint, format, and typecheck must also be green:
   `uv run ruff check . && uv run ruff format --check . && uv run mypy`. Fix every error and type
   failure until the whole suite is green before you merge.
