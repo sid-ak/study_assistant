@@ -7,7 +7,8 @@ Rows are appended automatically by the `sync-checkpoints` workflow
 (`.github/workflows/sync-checkpoints.yaml`); don't hand-edit this file. A row is added when:
 
 - a pull request that closes a `phase`-labeled issue is merged (checkpoint = the PR title), or
-- a commit is pushed whose message is `#<number>-checkpoint: <text>` (checkpoint = `<text>`).
+- a commit is pushed whose message is `checkpoint: <text>` (checkpoint = `<text>`); an optional
+  `#<number>-` / `<number>-` prefix is accepted too.
 
 The Issue column is the leading number of the branch name, which must be the GitHub issue number
 (e.g. `1-foundations` → `1`), or blank when the branch starts with no number (see
