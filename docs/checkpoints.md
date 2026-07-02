@@ -4,11 +4,12 @@ An append-only log of project checkpoints — one row per major iteration. It gi
 agent a quick history of how the project advanced and where it was left off.
 
 Rows are appended automatically by the `sync-checkpoints` workflow
-(`.github/workflows/sync-checkpoints.yaml`); don't hand-edit this file. A row is added when:
+(`.github/workflows/sync-checkpoints.yaml`) when a pull request is merged into `dev`; don't
+hand-edit this file. A row is added when the merged PR either:
 
-- a pull request that closes a `phase`-labeled issue is merged (checkpoint = the PR title), or
-- a commit is pushed whose message is `checkpoint: <text>` (checkpoint = `<text>`); an optional
-  `#<number>-` / `<number>-` prefix is accepted too.
+- closes a `phase`-labeled issue (checkpoint = the PR title), or
+- carries a `checkpoint: <text>` commit (checkpoint = `<text>`, one row per such commit); an
+  optional `#<number>-` prefix sets the Issue column, otherwise it comes from the PR branch.
 
 The Issue column is the leading number of the branch name, which must be the GitHub issue number
 (e.g. `1-foundations` → `1`), or blank when the branch starts with no number (see

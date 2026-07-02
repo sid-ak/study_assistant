@@ -1,13 +1,13 @@
 name: Sync checkpoints log
 
-# Append a row to docs/checkpoints.md for major iterations:
-#  - a merged PR that closes a `phase`-labeled issue, or
-#  - a push whose head commit message is `checkpoint: <text>` (an optional `#<number>-` /
-#    `<number>-` prefix is accepted too).
+# Append a row to docs/checkpoints.md when a PR is merged into the default branch (dev):
+#  - the merged PR closes a `phase`-labeled issue (checkpoint = PR title), or
+#  - the merged PR carries a `checkpoint: <text>` commit (checkpoint = <text>; an optional
+#    `#<number>-` / `<number>-` prefix is accepted).
+# Checkpoints are recorded only on merge, never from feature-branch pushes.
 on:
   pull_request:
     types: [closed]
-  push:
 
 permissions:
   contents: write
@@ -23,28 +23,24 @@ concurrency:
 jobs:
   checkpoint:
     runs-on: ubuntu-latest
-    # Only act on a merged PR, or a push whose head commit looks like a `checkpoint:` commit.
-    # `contains` is a coarse gate; checkpoint.py validates the exact `[#<n>-]checkpoint:` shape.
+    # Only a PR merged into the default branch (dev). checkpoint.py decides whether it warrants a
+    # row (closes a phase issue, or carries a `checkpoint:` commit).
     if: >-
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, 'checkpoint:'))
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == github.event.repository.default_branch
     steps:
       - uses: actions/checkout@v5
         with:
-          # Always commit the log to the default branch (dev), regardless of trigger.
-          # The row's Branch column still records the work branch (PR head / pushed ref).
+          # Commit the log to the default branch (dev). The row's Branch column records the PR head.
           ref: ${{ github.event.repository.default_branch }}
 
       - name: Append checkpoint row (if applicable)
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-          BRANCH: ${{ github.ref_name }}
-          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: python3 .github/scripts/checkpoint.py
 
       - name: Commit if changed
