@@ -1,4 +1,4 @@
-# Study Assistant - Architecture & Structure
+# Study Assistant: Architecture
 
 A personal study assistant over course materials (lecture slides, papers, notes). Answers questions
 with synthesis from Claude, grounded in retrieved sources, with citations back to the exact source
