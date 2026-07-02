@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Append a row to ``docs/checkpoints.md`` for major project iterations.
+"""Append a row to ``docs/checkpoints.md`` when a pull request is merged into the default branch.
 
-Run by ``.github/workflows/sync-checkpoints.yaml``. Two paths:
+Run by ``.github/workflows/sync-checkpoints.yaml`` on ``pull_request`` closed+merged. A row is
+added when the merged PR either:
 
-* **pull_request** closed + merged that closes a ``phase``-labeled issue → a row built from
-  the PR (branch = head ref, checkpoint = PR title).
-* **push** whose head commit message is ``checkpoint: <text>`` → a manual checkpoint row built
-  from that commit (checkpoint = ``<text>``). An optional ``#<number>-`` / ``<number>-`` prefix
-  (e.g. ``#2-checkpoint:``) is accepted but not required — the Issue column comes from the branch
-  name either way.
+* closes a ``phase``-labeled issue → checkpoint = the PR title, or
+* carries a commit whose subject is ``checkpoint: <text>`` → checkpoint = ``<text>`` (one row per
+  such commit). An optional ``#<number>-`` / ``<number>-`` prefix (e.g. ``#2-checkpoint:``) sets the
+  Issue column; without it the Issue comes from the PR branch's leading number.
 
-Columns: ``Date | Branch | Issue | Checkpoint``. The Issue cell is the leading number of the
-branch name, which must be the GitHub issue number (e.g. ``1-foundations`` → ``1``), or empty
-when the branch starts with no number. Appends are idempotent: an identical row is not added twice.
+Recording only on merge means a checkpoint lands in the log exactly when its commit reaches the
+default branch — never while it is still on a feature branch. Columns:
+``Date | Branch | Issue | Checkpoint``; Branch is the PR head ref. Appends are idempotent: an
+identical row is not added twice.
 """
 
 from __future__ import annotations
@@ -27,10 +27,11 @@ from pathlib import Path
 
 DEFAULT_DOC = Path(__file__).resolve().parents[2] / "docs" / "checkpoints.md"
 DOC = Path(os.environ.get("CHECKPOINTS_FILE", str(DEFAULT_DOC)))
-# Checkpoint commits look like `checkpoint: drafted store schema`, optionally with an issue-number
-# prefix like `#1-checkpoint: ...` or `1-checkpoint: ...` (the `#` and the `<n>-` are both optional;
-# `#<n>` auto-links the issue on GitHub). The Issue column is derived from the branch regardless.
-CHECKPOINT_RE = re.compile(r"^(?:#?\d+-)?checkpoint:\s*(?P<text>.*)$", re.IGNORECASE)
+# Checkpoint commit subjects look like `checkpoint: drafted store schema`, optionally with an
+# issue-number prefix like `#1-checkpoint: ...` or `1-checkpoint: ...` (the `#` and the `<n>-` are
+# both optional; `#<n>` auto-links the issue on GitHub). The number, when present, sets the Issue
+# column; otherwise it falls back to the PR branch.
+CHECKPOINT_RE = re.compile(r"^(?:#?(?P<issue>\d+)-)?checkpoint:\s*(?P<text>.*)$", re.IGNORECASE)
 
 
 def gh(*args: str) -> str:
@@ -58,6 +59,21 @@ def pr_closes_phase_issue(repo: str, pr_number: str) -> bool:
     return False
 
 
+def pr_checkpoint_commits(repo: str, pr_number: str) -> list[tuple[str, str]]:
+    """(issue, text) for each commit on the PR whose subject is a ``checkpoint:`` commit.
+
+    Reads the PR's own commits, so it is unaffected by the merge strategy (merge/squash/rebase).
+    """
+    raw = gh("pr", "view", pr_number, "--repo", repo, "--json", "commits")
+    commits = json.loads(raw)["commits"]
+    out: list[tuple[str, str]] = []
+    for commit in commits:
+        match = CHECKPOINT_RE.match(commit.get("messageHeadline", "").strip())
+        if match:
+            out.append((match.group("issue") or "", match.group("text").strip()))
+    return out
+
+
 def esc(value: str) -> str:
     """Flatten and escape text so it stays inside one table cell."""
     return value.replace("|", "\\|").replace("\n", " ").strip()
@@ -76,34 +92,27 @@ def append_row(when: str, branch: str, issue: str, checkpoint: str) -> None:
 
 
 def main() -> int:
-    event = os.environ["GITHUB_EVENT_NAME"]
     repo = os.environ["GITHUB_REPOSITORY"]
+    pr_number = os.environ["PR_NUMBER"]
+    branch = os.environ["PR_HEAD_REF"]
+    title = os.environ["PR_TITLE"]
     today = date.today().isoformat()
 
-    if event == "pull_request":
-        # The workflow only invokes this for merged PRs.
-        pr_number = os.environ["PR_NUMBER"]
-        branch = os.environ["PR_HEAD_REF"]
-        title = os.environ["PR_TITLE"]
-        if not pr_closes_phase_issue(repo, pr_number):
-            print("Merged PR closes no phase issue; nothing to record.")
-            return 0
+    recorded = False
+
+    # A merged PR that closes a phase-labeled issue → one row built from the PR itself.
+    if pr_closes_phase_issue(repo, pr_number):
         append_row(today, branch, issue_from_branch(branch), title)
-        return 0
+        recorded = True
 
-    if event == "push":
-        branch = os.environ["BRANCH"]
-        lines = os.environ.get("HEAD_COMMIT_MESSAGE", "").splitlines()
-        first = lines[0] if lines else ""
-        match = CHECKPOINT_RE.match(first.strip())
-        if not match:
-            print("Head commit is not a `checkpoint:` commit; nothing to record.")
-            return 0
-        description = match.group("text").strip()
-        append_row(today, branch, issue_from_branch(branch), description)
-        return 0
+    # Any `checkpoint:` commit that rode in on the PR → one row each. Issue comes from the commit's
+    # own `#<n>-` prefix when present, else the PR branch's leading number.
+    for issue, text in pr_checkpoint_commits(repo, pr_number):
+        append_row(today, branch, issue or issue_from_branch(branch), text)
+        recorded = True
 
-    print(f"Unhandled event: {event}")
+    if not recorded:
+        print("PR closes no phase issue and has no checkpoint commit; nothing to record.")
     return 0
 
 
