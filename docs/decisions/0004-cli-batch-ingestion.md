@@ -1,4 +1,4 @@
-# 4. Document ingestion: CLI batch
+# 4. Ingestion
 
 - Status: Accepted
 - Date: 2026-06-13

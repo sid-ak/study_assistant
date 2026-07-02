@@ -1,4 +1,4 @@
-# 1. RAG retrieval boundary: a shared `rag_core` library
+# 1. RAG Retrieval
 
 - Status: Accepted
 - Date: 2026-06-13

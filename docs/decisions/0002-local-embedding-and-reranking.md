@@ -1,4 +1,4 @@
-# 2. Embedding and reranking stack: local open-source models
+# 2. Embedding and Reranking
 
 - Status: Accepted
 - Date: 2026-06-13
