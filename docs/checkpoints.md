@@ -19,3 +19,4 @@ The Issue column is the leading number of the branch name, which must be the Git
 | ---------- | --------------- | ----- | -------------------------------------------------------------- |
 | 2026-06-27 | `1-foundations` | 1     | #1 Phase 0 — Foundations: uv workspace, pgvector stack, and CI |
 | 2026-07-02 | `2-phase-1-add-docs` | 2 | docs site test |
+| 2026-07-02 | `2-phase-1-add-docs` | 2 | testing sync-checkpoints. |
