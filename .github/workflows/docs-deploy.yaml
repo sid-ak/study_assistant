@@ -1,7 +1,7 @@
 name: Deploy docs
 
-# Build the Sphinx site and publish it to GitHub Pages on push to main or dev. Kept separate from
-# ci.yaml (like sync-issues / sync-checkpoints) so CI stays build-and-test only, with no deploy.
+# Build the Sphinx site and publish it to GitHub Pages on push to main or dev. Kept as its own
+# workflow (not a job in ci.yaml) so CI stays build-and-test only, with no deploy.
 on:
   push:
     branches: [main, dev]

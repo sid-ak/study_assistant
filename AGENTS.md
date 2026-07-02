@@ -9,8 +9,7 @@ Anthropic API.
 
 - Read [`docs/architecture.md`](docs/architecture.md), it is the full design.
 - Read ADRs under [`docs/decisions/`](docs/decisions/), locked decisions live there.
-- Read [`docs/issues.md`](docs/issues.md), work is tracked as phases there.
-- Read [`docs/checkpoints.md`](docs/checkpoints.md), completed work is tracked there.
+- Read the [GitHub issues](https://github.com/sid-ak/study_assistant/issues), work is tracked as phases there.
 - Read [`README.md`](README.md), Status blurb states intent.
 - Compare against repo, which is the ground truth.
   - Scan with `ls` and compare with directory structure in `architecture.md` to gauge progress.
@@ -79,12 +78,12 @@ ADR before changing what it governs, and do not restate its rules here.
 ## PR instructions
 
 - Branch from `dev`, naming the branch with its GitHub issue number first (e.g. `4-embeddings` for
-  issue #4) so `docs/checkpoints.md` attributes correctly.
+  issue #4) so the branch links back to its issue.
 - PR title format: `[<phase or package>] <Title>` — e.g. `[rag_core/store] Add schema + CRUD`.
 - Run the full gate green before handing off (with `docker compose up -d`):
   `uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest && uv run sphinx-build -b html docs site -W`.
-- Update the `README.md` Status blurb in the same change — current status lives there (and in
-  `docs/issues.md` / `docs/checkpoints.md`), not in this file.
+- Update the `README.md` Status blurb in the same change — current status lives there (and in the
+  GitHub issues), not in this file.
 - Never commit; only stage. Do not run `git commit`. At the end of a set of changes, `git add` the
   relevant files and leave them staged for the human to review — but only if 0 files are currently
   staged. If anything is already staged, do not stage at all; leave the working tree as-is.

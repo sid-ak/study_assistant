@@ -9,8 +9,6 @@
 :caption: Project
 
 architecture.md
-issues.md
-checkpoints.md
 ```
 
 ```{toctree}

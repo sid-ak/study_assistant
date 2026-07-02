@@ -7,7 +7,7 @@ free; only answer generation calls the Anthropic API.
 
 - Design: [`docs/architecture.md`](docs/architecture.md)
 - Decisions: [`docs/decisions/`](docs/decisions/) (ADRs)
-- Roadmap: [`docs/issues.md`](docs/issues.md) (phased)
+- Roadmap: [GitHub issues](https://github.com/sid-ak/study_assistant/issues) (phased)
 
 ## Status
 

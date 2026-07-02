@@ -34,8 +34,6 @@ pre-commit install      # installs the git hooks
     valid in branch names.)
   - Commit message: prefix with `#<number>` so GitHub auto-links the issue, e.g.
     `#1 add pgvector schema`.
-  - Checkpoint commit messages: `checkpoint: <text>` (optional `#<number>-` prefix). Recorded when
-    the commit is merged into `dev`, not on the feature-branch push.
 
 ## Governance (`AGENTS.md`)
 
@@ -52,7 +50,5 @@ changing direction.
 
 ## Issues / roadmap
 
-Work is tracked as phases on GitHub Issues, which are the source of truth. `docs/issues.md` is an
-auto-generated mirror: the `sync-issues` workflow (`.github/workflows/sync-issues.yaml`) regenerates
-and commits it whenever an issue is opened, closed, edited, or relabeled. Manage issues on GitHub —
-don't hand-edit `docs/issues.md`. Issue bodies are not mirrored.
+Work is tracked as phases on [GitHub Issues](https://github.com/sid-ak/study_assistant/issues),
+which are the source of truth — manage them there.
