@@ -14,7 +14,13 @@ class Store:
     """Store client for pgvector-backed RAG storage."""
 
     def __init__(self, database_url: str | None = None) -> None:
-        self.database_url = database_url or settings.database_url
+        url = database_url or settings.database_url
+        if url is None:
+            raise RuntimeError(
+                "No database URL configured. Pass Store(database_url=...) or set DATABASE_URL "
+                "in the environment / .env (see .env.example)."
+            )
+        self.database_url = url
 
     def initialize_schema(self) -> None:
         """Idempotently creates extension and tables."""
