@@ -34,7 +34,7 @@ pre-commit install      # installs the git hooks
     isn't valid in branch names.)
   - Commit message: prefix with `#<number>` so GitHub auto-links the issue, e.g.
     `#1 add pgvector schema`.
-  - Checkpoint commit messages: prefix with `#<number>-checkpoint:`.
+  - Checkpoint commit messages: `checkpoint: <text>` (an `#<number>-` prefix is optional).
 
 ## Governance (`AGENTS.md`)
 

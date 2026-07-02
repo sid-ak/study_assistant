@@ -2,7 +2,8 @@ name: Sync checkpoints log
 
 # Append a row to docs/checkpoints.md for major iterations:
 #  - a merged PR that closes a `phase`-labeled issue, or
-#  - a push whose head commit message is `#<number>-checkpoint: <text>`.
+#  - a push whose head commit message is `checkpoint: <text>` (an optional `#<number>-` /
+#    `<number>-` prefix is accepted too).
 on:
   pull_request:
     types: [closed]
@@ -22,11 +23,11 @@ concurrency:
 jobs:
   checkpoint:
     runs-on: ubuntu-latest
-    # Only act on a merged PR, or a push whose head commit looks like `#<n>-checkpoint:`.
-    # `contains` is a coarse gate; checkpoint.py validates the exact `#<n>-checkpoint:` shape.
+    # Only act on a merged PR, or a push whose head commit looks like a `checkpoint:` commit.
+    # `contains` is a coarse gate; checkpoint.py validates the exact `[#<n>-]checkpoint:` shape.
     if: >-
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '-checkpoint:'))
+      (github.event_name == 'push' && contains(github.event.head_commit.message, 'checkpoint:'))
     steps:
       - uses: actions/checkout@v5
         with:

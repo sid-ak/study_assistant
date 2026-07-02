@@ -5,8 +5,10 @@ Run by ``.github/workflows/sync-checkpoints.yaml``. Two paths:
 
 * **pull_request** closed + merged that closes a ``phase``-labeled issue → a row built from
   the PR (branch = head ref, checkpoint = PR title).
-* **push** whose head commit message is ``#<number>-checkpoint: <text>`` → a manual checkpoint
-  row built from that commit (checkpoint = ``<text>``).
+* **push** whose head commit message is ``checkpoint: <text>`` → a manual checkpoint row built
+  from that commit (checkpoint = ``<text>``). An optional ``#<number>-`` / ``<number>-`` prefix
+  (e.g. ``#2-checkpoint:``) is accepted but not required — the Issue column comes from the branch
+  name either way.
 
 Columns: ``Date | Branch | Issue | Checkpoint``. The Issue cell is the leading number of the
 branch name, which must be the GitHub issue number (e.g. ``1-foundations`` → ``1``), or empty
@@ -25,9 +27,10 @@ from pathlib import Path
 
 DEFAULT_DOC = Path(__file__).resolve().parents[2] / "docs" / "checkpoints.md"
 DOC = Path(os.environ.get("CHECKPOINTS_FILE", str(DEFAULT_DOC)))
-# Checkpoint commits look like `#1-checkpoint: drafted store schema` (the leading `#` is
-# optional; `#<n>` auto-links the issue on GitHub).
-CHECKPOINT_RE = re.compile(r"^#?\d+-checkpoint:\s*(?P<text>.*)$", re.IGNORECASE)
+# Checkpoint commits look like `checkpoint: drafted store schema`, optionally with an issue-number
+# prefix like `#1-checkpoint: ...` or `1-checkpoint: ...` (the `#` and the `<n>-` are both optional;
+# `#<n>` auto-links the issue on GitHub). The Issue column is derived from the branch regardless.
+CHECKPOINT_RE = re.compile(r"^(?:#?\d+-)?checkpoint:\s*(?P<text>.*)$", re.IGNORECASE)
 
 
 def gh(*args: str) -> str:
@@ -94,7 +97,7 @@ def main() -> int:
         first = lines[0] if lines else ""
         match = CHECKPOINT_RE.match(first.strip())
         if not match:
-            print("Head commit is not a `#<n>-checkpoint:` commit; nothing to record.")
+            print("Head commit is not a `checkpoint:` commit; nothing to record.")
             return 0
         description = match.group("text").strip()
         append_row(today, branch, issue_from_branch(branch), description)
