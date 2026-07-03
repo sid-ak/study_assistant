@@ -6,7 +6,7 @@
 ## Context
 
 A core goal of the project is to decouple tooling from the model — the agent reaches retrieval
-through a custom MCP server rather than importing it directly. Claude handles reasoning and
+through a custom MCP server rather than importing it directly. The model handles reasoning and
 synthesis; retrieval (chunking, embedding, hybrid search, reranking) is a separate concern that
 several components need: the MCP server (to expose it as tools), the FastAPI backend (for
 ingestion/admin paths), and the CLI (for batch ingestion).

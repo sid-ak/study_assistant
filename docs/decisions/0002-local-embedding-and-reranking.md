@@ -5,8 +5,8 @@
 
 ## Context
 
-Claude has no embeddings endpoint, so the retrieval stack is an independent vendor/tech choice with
-two distinct stages:
+The generation model provides no embeddings endpoint, so the retrieval stack is an independent
+vendor/tech choice with two distinct stages:
 
 - Embedding — turns each chunk and each query into a vector stored in pgvector; powers the dense
   half of hybrid search.

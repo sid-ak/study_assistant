@@ -1,9 +1,9 @@
 # Study Assistant: Architecture
 
 A personal study assistant over course materials (lecture slides, papers, notes). Answers questions
-with synthesis from Claude, grounded in retrieved sources, with citations back to the exact source
-slide/page. The locked decisions that shaped all of this are recorded as Architectural Decision
-Records (ADRs) in [`decisions/`](decisions/).
+with synthesis grounded in retrieved sources, with citations back to the exact source slide/page.
+The decisions that shaped all of this are recorded as Architectural Decision Records (ADRs) in
+[`decisions/`](decisions/).
 
 ## Outline
 
@@ -21,14 +21,6 @@ everything on machine, offline, and for free. Embeddings and the cross-encoder r
 there are no per-call API costs and no network dependency for retrieval and because nothing transits
 to a vendor, the corpus stays private.
 
-> NOTE  
-> "Offline and for free" scopes to ingestion and retrieval, which run entirely on-machine.
-> Generation is the one exception: it calls Claude (`claude-opus-4-8`) through the Anthropic API, a
-> hosted, paid, online dependency. The model-agnostic goal therefore applies _below_ the reasoning
-> layer — the embedder, reranker, and coding agent are swappable, while the reasoning model is
-> deliberately Claude-coupled for synthesis quality. A path to closing that gap is in
-> [Future Scope](#future-scope).
-
 Domain-level goals that shaped the architecture also include keeping a human in the loop (HITL) to
 steer an ambiguous question before a slow rerank runs over the wrong material, keeping the reasoning
 model swappable rather than foundational, and keeping the reasoning layer ignorant of where chunks
@@ -38,6 +30,13 @@ live or how they're scored so retrieval stays a clean, replaceable concern.
 
 The system is a retrieval-augmented pipeline organized into three lanes: Ingestion, Retrieval, and
 Generation over a single PostgreSQL/pgvector store, with a React frontend on top.
+
+One theme runs through the whole system: each swappable component is defined as a small interface
+with a concrete implementation behind it. Callers depend only on the abstraction, so an
+implementation is chosen by config and replaced with a fake in tests. The embedder, reranker,
+generator, and store access are all built this way, which is what keeps the system swappable and
+testable across many implementations. See
+[ADR 0006](decisions/0006-interface-first-architecture.md).
 
 ![RAG pipeline architecture](./assets/architecture.svg)
 
@@ -62,8 +61,10 @@ against regressions and demonstrates that reranking measurably improves results.
 
 Generation runs in the FastAPI backend, where a LangGraph state machine orchestrates the agent loop
 — reaching retrieval through the MCP server's tools, pausing at HITL checkpoints, and synthesizing a
-grounded answer with Claude (`claude-opus-4-8`, adaptive thinking, streaming). Responses stream to
-the React frontend over SSE, with citations resolving back to the exact source slide or page.
+grounded answer. Responses stream to the React frontend over SSE, with citations resolving back to
+the exact source slide or page.
+
+See [ADR 0007](decisions/0007-generation-backend.md) for the backend and candidate models.
 
 ## Governance and Conventions
 
@@ -86,22 +87,6 @@ coder or coding agent in the future.
 > and `/memory` reference `CLAUDE.md` by convention, and its directory-walk loading (which pulls in
 > each scoped file exactly when an agent works in that directory) triggers on `CLAUDE.md`. Keeping
 > the stub preserves all of that while the canonical content stays under `AGENTS.md`.
-
-### Primary Conventions
-
-- Retrieval lives only in `rag_core`. MCP server and API are consumers, never reimplementers.
-- Lazy model loading: no `torch` import at module top-level outside `embed/` and `rerank/`.
-- Embedder/reranker behind a small interface so the rest of the system is agnostic to the concrete
-  model; the only real lock-in is the pgvector embedding dimension (`vector(N)`).
-
-### Other Conventions
-
-- Models: Claude via the Anthropic SDK, `claude-opus-4-8`, adaptive thinking, streaming.
-- Python tooling: `uv` workspace; lint/format/typecheck in pre-commit and CI.
-- The `study` CLI is its own top-level package (`cli/`), depending on `rag_core` as a workspace
-  dependency. Keeps the ingestion entry point cleanly separated from the library.
-- Model weights are cached in a named Docker volume, not baked into images — the multi-GB `bge`
-  download happens once.
 
 ## Directory
 
@@ -171,28 +156,17 @@ study_assistant/
     └── postgres/                # pgvector init.sql, model-weights volume notes
 ```
 
-> NOTE  
-> The Python packages are documented on a Sphinx + MyST + Furo site (`docs/conf.py`, deployed by
-> `.github/workflows/docs-deploy.yaml`; see [ADR 0005](decisions/0005-documentation-tooling.md)).
-
 ## Future Scope
-
-### Model Agnostic
-
-A hybrid local/Claude generation approach would extend the model-agnostic goal through the reasoning
-layer and make a fully free, offline run possible end-to-end. The generation node would sit behind a
-small interface — the same pattern already used for the embedder and reranker — so config selects
-the model per run: a local model served through an OpenAI-compatible runtime (Ollama, llama.cpp, or
-vLLM) as the free default, with Claude reserved for harder questions where synthesis quality matters
-most.
 
 ### Cloud Deployable
 
 A cloud-deployable path is the natural next step beyond local: it would add managed Postgres, a
 registry push, and prod-vs-local config. The heavier lift there is the local `bge` models, which are
 expensive to host in the cloud — so a future cloud move may also revisit the embedding/reranking
-stack (e.g. a hosted pairing like Voyage's `voyage-3` + `rerank-2.5`), a change gated by the
-pgvector `vector(N)` dimension lock-in and therefore a re-embed plus schema migration.
+stack (e.g. a hosted pairing like Voyage's `voyage-3` + `rerank-2.5`). With per-model embedding
+columns ([ADR 0008](decisions/0008-per-model-embedding-columns.md)) that swap is a re-embed into a
+new `vector(N)` column and index rather than a destructive rebuild of the shared one — additive and
+reversible, though pgvector still requires a fixed dimension per column.
 
 ### Multi User Auth
 
