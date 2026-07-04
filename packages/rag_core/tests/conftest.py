@@ -10,7 +10,7 @@ from collections.abc import Iterator
 import pytest
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from rag_core.store import Store
+from rag_core.store import InMemoryStore, Store, StoreProtocol
 
 
 class IntegrationConfig(BaseSettings):
@@ -27,11 +27,17 @@ class IntegrationConfig(BaseSettings):
 
 @pytest.fixture(scope="session")
 def integration_config() -> IntegrationConfig:
+    """Session-scoped test-only settings, read once from the environment / `.env`."""
     return IntegrationConfig()
 
 
 @pytest.fixture
-def store(integration_config: IntegrationConfig) -> Iterator[Store]:
+def db_store(integration_config: IntegrationConfig) -> Iterator[Store]:
+    """Real, DB-backed `Store` against `TEST_DATABASE_URL`, tables truncated after each test.
+
+    Behavior that only the concrete `Store` has (raw vector round-tripping,
+    schema DDL). Shared `StoreProtocol` behavior uses the parametrized `store` fixture instead.
+    """
     # Integration tests must never touch the app's real DATABASE_URL
     if integration_config.test_database_url is None:
         raise RuntimeError(
@@ -45,3 +51,20 @@ def store(integration_config: IntegrationConfig) -> Iterator[Store]:
     # Clears them together without needing CASCADE for the chunks -> documents foreign key.
     with s.get_connection() as conn:
         conn.execute("TRUNCATE documents, chunks")
+
+
+@pytest.fixture(
+    params=[
+        "memory",
+        pytest.param("db", marks=pytest.mark.integration),
+    ]
+)
+def store(request: pytest.FixtureRequest) -> StoreProtocol:
+    """Every ``StoreProtocol`` implementation, once each.
+
+    Backs the contract suite.
+    """
+    if request.param == "memory":
+        return InMemoryStore()
+    db_store: Store = request.getfixturevalue("db_store")
+    return db_store

@@ -58,4 +58,5 @@ ignore_missing_imports = true
 testpaths = ["packages"]
 markers = [
     "integration: tests that require a live Postgres+pgvector instance (docker compose up -d)",
+    "unit: fast tests with no external services (auto-applied to every non-integration test)",
 ]
