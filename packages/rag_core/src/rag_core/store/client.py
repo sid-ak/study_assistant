@@ -113,3 +113,13 @@ class Store:
                                 uid,
                             )
                         )
+
+    def get_chunks_by_document(self, document_id: UUID) -> list[dict[str, Any]]:
+        """Return every chunk row belonging to ``document_id``, or ``[]`` if none exist."""
+        with self.get_connection() as conn:
+            cur = conn.execute(
+                "SELECT id, document_id, content, metadata, embedding, user_id "
+                "FROM chunks WHERE document_id = %s",
+                (document_id,),
+            )
+            return cur.fetchall()
