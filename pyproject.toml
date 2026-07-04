@@ -37,7 +37,10 @@ target-version = "py312"
 src = ["packages/rag_core/src"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+# D10x = docstring-presence rules (pydocstyle): every module, class, function, and __init__ must be
+# documented, repo-wide. The stylistic D2xx/D4xx rules are deliberately left out so existing
+# only presence of docstrings is enforced and not style.
+select = ["E", "F", "I", "UP", "B", "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -16,7 +16,7 @@ class InMemoryStore:
     """Dict-backed fake conforming to ``StoreProtocol``."""
 
     def __init__(self) -> None:
-        # Keyed by document / chunk id. ``document`` rows mirror Store's SELECT shape.
+        """Start empty, keyed by document / chunk id (document rows mirror Store's SELECT shape)."""
         self.documents: dict[UUID, dict[str, Any]] = {}
         self.chunks: dict[UUID, dict[str, Any]] = {}
 
@@ -30,6 +30,7 @@ class InMemoryStore:
         file_hash: str,
         user_id: UUID | None = None,
     ) -> UUID:
+        """Insert document metadata idempotently by file_hash, returning the stored id."""
         uid = user_id or settings.default_user_id
         # Idempotent by file_hash: keep the original row/id, refresh the filename.
         for doc in self.documents.values():
@@ -46,11 +47,13 @@ class InMemoryStore:
         return id
 
     def update_document(self, id: UUID, filename: str) -> None:
+        """Update the stored filename; a no-op if the document is unknown."""
         doc = self.documents.get(id)
         if doc is not None:
             doc["filename"] = filename
 
     def delete_document(self, id: UUID) -> None:
+        """Delete a document and cascade-drop its chunks."""
         self.documents.pop(id, None)
         # Cascade: drop chunks belonging to the document.
         self.chunks = {
@@ -58,6 +61,7 @@ class InMemoryStore:
         }
 
     def get_document_by_hash(self, file_hash: str) -> dict[str, Any] | None:
+        """Return a copy of the document with this file_hash, or None if absent."""
         for doc in self.documents.values():
             if doc["file_hash"] == file_hash:
                 return dict(doc)
@@ -68,6 +72,7 @@ class InMemoryStore:
         chunks: list[dict[str, Any]],
         user_id: UUID | None = None,
     ) -> None:
+        """Store each chunk by id: ``{id, document_id, content, metadata, embedding}``."""
         uid = user_id or settings.default_user_id
         for chunk in chunks:
             self.chunks[chunk["id"]] = {
@@ -80,4 +85,5 @@ class InMemoryStore:
             }
 
     def get_chunks_by_document(self, document_id: UUID) -> list[dict[str, Any]]:
+        """Return copies of every chunk belonging to ``document_id``, or ``[]`` if none."""
         return [dict(c) for c in self.chunks.values() if c["document_id"] == document_id]

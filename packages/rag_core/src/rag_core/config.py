@@ -1,3 +1,5 @@
+"""Application configuration for rag_core, loaded from the environment / ``.env``."""
+
 from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,7 +19,7 @@ class Settings(BaseSettings):
     # Vector dimensions (pinned to bge-m3)
     embedding_dimension: int = 1024
 
-    # Default user for single-user local scope (ADR 0003)
+    # Default user for single-user local scope
     default_user_id: UUID = UUID("00000000-0000-0000-0000-000000000000")
 
 

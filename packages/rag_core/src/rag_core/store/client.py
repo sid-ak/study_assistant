@@ -1,3 +1,5 @@
+"""The concrete pgvector-backed ``Store`` — the DB implementation of ``StoreProtocol``."""
+
 from typing import Any
 from uuid import UUID
 
@@ -14,6 +16,7 @@ class Store:
     """Store client for pgvector-backed RAG storage."""
 
     def __init__(self, database_url: str | None = None) -> None:
+        """Bind to ``database_url`` (or ``settings.database_url``); does not open a connection."""
         url = database_url or settings.database_url
         if url is None:
             raise RuntimeError(
