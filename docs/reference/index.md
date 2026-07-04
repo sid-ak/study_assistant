@@ -17,10 +17,26 @@
    :show-inheritance:
 ```
 
+## rag_core.store.protocol
+
+```{eval-rst}
+.. automodule:: rag_core.store.protocol
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.store.client
 
 ```{eval-rst}
 .. automodule:: rag_core.store.client
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.store.memory
+
+```{eval-rst}
+.. automodule:: rag_core.store.memory
    :members:
    :show-inheritance:
 ```

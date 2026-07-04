@@ -22,7 +22,7 @@ uv sync
 
 ```bash
 uv run pytest                        # everything
-uv run pytest -m "not integration"   # fast, no DB
+uv run pytest -m unit                # fast, no DB
 uv run pytest -m integration         # DB-backed
 uv run pytest -k "<test_name>"       # one test
 ```
