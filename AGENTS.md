@@ -45,6 +45,10 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
 
 ## Testing instructions
 
+- Strict TDD, in two passes (binding, not a preference). For any new feature or issue, pass one
+  writes tests only — fully describing the expected behavior — and adds no implementation code; run
+  them and expect red. Pass two adds implementation until they pass (green). This applies to both
+  unit and integration tests, per the `@pytest.mark.integration` marker in `pyproject.toml`.
 - The CI plan is in `.github/workflows/ci.yaml`: a `checks` job (ruff lint, ruff format check, mypy,
   pytest against a pgvector service) and a `docs` job that builds the Sphinx site
   (`uv run sphinx-build -b html docs site -W`, build-only — deployment lives in `docs-deploy.yaml`).
@@ -62,7 +66,9 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
   failure until the whole suite is green before you merge.
 - Docs must build clean: `uv run sphinx-build -b html docs site -W` (CI runs this too — `-W` turns
   Sphinx warnings into errors, catching broken toctrees, anchors, and autodoc import failures).
-- Add or update tests for the code you change, even if nobody asked.
+- Tests come first, not alongside. Writing or updating tests for the code you change is mandatory
+  (even if nobody asked), and under the two-pass rule above it happens in pass one — before the
+  implementation exists — not in the same pass as the code.
 - Schema changes need a fresh DB: `initialize_schema()` is `CREATE ... IF NOT EXISTS` and will not
   retrofit constraints, so run `docker compose down -v && docker compose up -d` after editing
   `store/schema.py`.
