@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS chunks (
 );
 
 -- HNSW index for vector similarity search (cosine distance)
-CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON chunks 
+CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON chunks
 USING hnsw (embedding vector_cosine_ops);
 
 -- GIN index for full-text search (BM25)
