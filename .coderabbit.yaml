@@ -9,5 +9,6 @@ reviews:
   poem: false
   auto_review:
     enabled: true
-    drafts: true
+    drafts: false # skip drafts; only review once the PR is published/marked ready
+    auto_incremental_review: false # don't re-review on every new commit
     base_branches: [".*"]
