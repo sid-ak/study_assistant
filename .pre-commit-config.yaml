@@ -20,10 +20,14 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1
+  - repo: local
     hooks:
       - id: mypy
-        # Match the workspace config; no third-party deps to install yet.
-        args: [--config-file=pyproject.toml]
+        name: mypy
+        # Run the workspace mypy from the uv venv (same as CI's `uv run mypy`) so it resolves
+        # psycopg / numpy / pytest / pydantic-settings. An isolated mirrors-mypy env can't see those
+        # third-party deps and fails on import-not-found even when the code typechecks clean.
+        entry: uv run mypy
+        language: system
+        types: [python]
         pass_filenames: false
