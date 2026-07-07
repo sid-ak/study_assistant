@@ -10,6 +10,21 @@ jobs:
   checks:
     name: Lint, typecheck, test
     runs-on: ubuntu-latest
+    # Integration tests (rag_core/store) run against a real pgvector instance.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: study
+          POSTGRES_PASSWORD: change-me
+          POSTGRES_DB: study_assistant_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U study -d study_assistant_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v5
 
@@ -33,6 +48,8 @@ jobs:
 
       - name: Pytest
         run: uv run pytest
+        env:
+          TEST_DATABASE_URL: postgresql://study:change-me@localhost:5432/study_assistant_test
 
   docs:
     name: Docs build

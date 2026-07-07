@@ -5,20 +5,10 @@ language: en-US
 
 reviews:
   profile: chill # fewer, higher-signal comments (the alternative is "assertive")
-  high_level_summary: true
+  high_level_summary: false
   poem: false
   auto_review:
     enabled: true
-    drafts: false
+    drafts: false # skip drafts; only review once the PR is published/marked ready
+    auto_incremental_review: false # don't re-review on every new commit
     base_branches: [".*"]
-  path_instructions:
-    - path: "**/*.py"
-      instructions: >-
-        Python 3.12, typed under `mypy --strict` and linted by ruff (rules E,F,I,UP,B,
-        line length 100). Enforce the project conventions in AGENTS.md and docs/decisions:
-        retrieval logic lives only in `rag_core`; no top-level `torch` import outside
-        `embed/` and `rerank/`; relevant tables carry the defaulted `user_id` column.
-
-tools:
-  ruff:
-    enabled: true

@@ -1,7 +1,7 @@
 """Sphinx configuration for the Study Assistant documentation site.
 
 Builds one static site from the all-Markdown docs/ tree (via myst-parser) plus an autodoc API
-reference for rag_core (see ADR 0005). Build with:
+reference for rag_core. Build with:
 
     uv run sphinx-build -b html docs site -W
 """

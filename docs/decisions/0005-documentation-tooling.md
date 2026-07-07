@@ -1,4 +1,4 @@
-# 5. Documentation site tooling: Sphinx, MyST, and Furo
+# 5. Documentation Site
 
 - Status: Accepted
 - Date: 2026-07-01
@@ -13,13 +13,13 @@ prone to drifting from the code. Both halves — narrative and generated referen
 static site, deployed by a GitHub Actions workflow like the rest of the project's automation.
 
 An initial pass adopted MkDocs + `mkdocstrings` + Material for MkDocs and got as far as a working
-`mkdocs.yml`, a generated API reference page, and a deploy workflow. That work surfaced a governance
-problem rather than a technical one: MkDocs 2.0 (announced by a maintainer who took over the project
-mid-2024) removes the plugin system entirely, has no migration path for existing projects, and is
-currently unlicensed. Since `mkdocstrings` — the entire reason to use this stack — is itself a
-plugin, pinning `mkdocs<2` only defers the exposure; it does not remove it. For a project being
-written from scratch with no legacy MkDocs investment to protect, that is a reason to pick a
-foundation without that single point of failure, not to work around it.
+`mkdocs.yaml`, a generated API reference page, and a deploy workflow. That work surfaced a
+governance problem rather than a technical one: MkDocs 2.0 (announced by a maintainer who took over
+the project mid-2024) removes the plugin system entirely, has no migration path for existing
+projects, and is currently unlicensed. Since `mkdocstrings` — the entire reason to use this stack —
+is itself a plugin, pinning `mkdocs<2` only defers the exposure; it does not remove it. For a
+project being written from scratch with no legacy MkDocs investment to protect, that is a reason to
+pick a foundation without that single point of failure, not to work around it.
 
 Several tool families were considered:
 
