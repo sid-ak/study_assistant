@@ -7,5 +7,5 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- teardown never touches real ingested data. POSTGRES_DB auto-creates only one database, so the
 -- test database must be created explicitly here. Keep this name in sync with POSTGRES_TEST_DB /
 -- TEST_DATABASE_URL in .env. The pgvector extension is created inside it by
--- Store.initialize_schema() when the tests first connect.
+-- Store.initialize() when the tests first connect.
 CREATE DATABASE study_assistant_test;

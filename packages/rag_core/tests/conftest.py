@@ -48,7 +48,7 @@ def db_store(integration_config: IntegrationConfig) -> Iterator[Store]:
             "provisioned automatically by infra/postgres/init.sql on `docker compose up -d`."
         )
     s = Store(database_url=integration_config.test_database_url)
-    s.initialize_schema()
+    s.initialize()
     yield s
     with s.get_connection() as conn:
         # Per-model columns outlive a TRUNCATE, so drop them first: a later test may register the

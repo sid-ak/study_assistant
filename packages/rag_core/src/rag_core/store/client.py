@@ -33,8 +33,8 @@ class Store:
             )
         self.database_url = url
 
-    def initialize_schema(self) -> None:
-        """Idempotently creates extension and tables."""
+    def initialize(self) -> None:
+        """Idempotently create the pgvector extension, tables, and indexes."""
         with psycopg.connect(self.database_url, autocommit=True) as conn:
             conn.execute(SCHEMA_SQL)
 

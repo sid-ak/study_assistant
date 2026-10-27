@@ -21,9 +21,9 @@ from rag_core.store.schema import embedding_column
 pytestmark = pytest.mark.integration
 
 
-def test_initialize_schema(db_store: Store) -> None:
-    """initialize_schema is idempotent — a second run against an existing schema must not error."""
-    db_store.initialize_schema()
+def test_initialize_is_idempotent_against_an_existing_schema(db_store: Store) -> None:
+    """initialize runs again over the schema the fixture already created without erroring."""
+    db_store.initialize()
 
 
 def test_document_and_chunks_round_trip_vector(db_store: Store) -> None:

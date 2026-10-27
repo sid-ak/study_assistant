@@ -25,7 +25,7 @@ class EmbedderInfo:
 class StoreProtocol(Protocol):
     """Structural interface for document and chunk storage, independent of any backend."""
 
-    def initialize_schema(self) -> None:
+    def initialize(self) -> None:
         """Idempotently prepare the backing storage for use; safe to call more than once."""
         ...
 

@@ -84,7 +84,7 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
 - Tests come first, not alongside. Writing or updating tests for the code you change is mandatory
   (even if nobody asked), and under the three-pass rule above it happens in pass one — before the
   interface or implementation exists — not in the same pass as the code.
-- Schema changes need a fresh DB: `initialize_schema()` is `CREATE ... IF NOT EXISTS` and will not
+- Schema changes need a fresh DB: `Store.initialize()` is `CREATE ... IF NOT EXISTS` and will not
   retrofit constraints, so run `docker compose down -v && docker compose up -d` after editing
   `store/schema.py`.
 

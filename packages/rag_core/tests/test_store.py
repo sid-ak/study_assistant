@@ -31,6 +31,13 @@ from rag_core.store import (
 )
 
 
+def test_initialize_can_run_repeatedly(store: StoreProtocol) -> None:
+    """initialize is safe to call more than once and leaves the store usable."""
+    store.initialize()
+    store.initialize()
+    assert store.get_document_by_hash("nope") is None
+
+
 def test_add_document_returns_stored_id(store: StoreProtocol) -> None:
     """A fresh insert returns the id it was given."""
     doc_id = uuid.uuid4()

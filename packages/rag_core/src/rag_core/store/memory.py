@@ -32,8 +32,8 @@ class InMemoryStore:
         self.embedders: dict[str, EmbedderInfo] = {}
         self.current_model_id: str | None = None
 
-    def initialize_schema(self) -> None:
-        """No-op: an in-memory store has no schema to create."""
+    def initialize(self) -> None:
+        """No-op: an in-memory store has nothing to prepare."""
 
     def add_document(
         self,

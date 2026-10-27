@@ -2,7 +2,7 @@
 
 Schema evolution has two parts:
 
-- ``Store.initialize_schema`` runs the idempotent ``CREATE ... IF NOT EXISTS`` bootstrap below.
+- ``Store.initialize`` runs the idempotent ``CREATE ... IF NOT EXISTS`` bootstrap below.
 - Embedding storage grows additively (ADR 0008). ``Store.register_embedder`` records each model in
   ``embedding_models`` and adds that model's own ``vector(N)`` column and HNSW index to ``chunks``,
   so a new embedder sits beside the old one instead of altering a shared column.
