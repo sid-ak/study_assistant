@@ -1,4 +1,4 @@
-"""Unit tests for ``embedding_column``, which names each embedder's vector column (ADR 0008)."""
+"""Unit tests for ``embedding_column``, which names each embedder's vector column."""
 
 import pytest
 

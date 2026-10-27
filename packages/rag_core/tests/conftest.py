@@ -1,6 +1,6 @@
 """Shared pytest fixtures and test-only configuration for the rag_core test suite.
 
-Anything reusable across test modules lives here: pytest auto-loads `conftest.py`, so test files use
+Anything reusable across test modules lives here: pytest auto-loads this module, so test files use
 these fixtures without importing them. Keep test-only settings in `IntegrationConfig` (never in the
 app's `rag_core.config.Settings`), and add more test config / fixtures here as the suite grows.
 """
@@ -47,7 +47,7 @@ def database_url(integration_config: IntegrationConfig) -> Iterator[str]:
         raise RuntimeError(
             "TEST_DATABASE_URL is not set. Integration tests require an isolated test database "
             "(never the app's DATABASE_URL). Copy .env.example to .env; the test database is "
-            "provisioned automatically by infra/postgres/init.sql on `docker compose up -d`."
+            "provisioned automatically on the first `docker compose up -d`."
         )
     url = integration_config.test_database_url
     Store(database_url=url, embedder=EMBEDDER_A).initialize()

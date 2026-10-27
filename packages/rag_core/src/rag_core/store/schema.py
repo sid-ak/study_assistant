@@ -3,11 +3,12 @@
 Schema evolution has two parts:
 
 - ``Store.initialize`` runs the idempotent ``CREATE ... IF NOT EXISTS`` bootstrap below.
-- Embedding storage grows additively (ADR 0008). ``EmbedderRegistry.register`` records each model in
+- Embedding storage grows additively. ``EmbedderRegistry.register`` records each model in
   ``embedding_models`` and adds that model's own ``vector(N)`` column and HNSW index to ``chunks``,
   so a new embedder sits beside the old one instead of altering a shared column.
 
-Re-embedding into a new model's column and dropping the old one is tracked by issue #15.
+Re-embedding existing chunks into a new model's column and dropping an old model's column are not
+implemented yet.
 """
 
 import re
@@ -35,7 +36,7 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 
 -- Chunks table: Stores semantic segments. Embeddings live in per-model columns that
--- EmbedderRegistry.register adds (ADR 0008), so none is declared here.
+-- EmbedderRegistry.register adds, so none is declared here.
 CREATE TABLE IF NOT EXISTS chunks (
     id UUID PRIMARY KEY,
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
@@ -68,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id);
 
 
 def embedding_column(model_id: str) -> str:
-    """Name the ``chunks`` column that holds ``model_id``'s embeddings (ADR 0008).
+    """Name the ``chunks`` column that holds ``model_id``'s embeddings.
 
     Raises ``ValueError`` if the id has no usable characters or the name would exceed Postgres's
     63-byte identifier limit once the index suffix is added.

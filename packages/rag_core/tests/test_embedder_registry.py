@@ -1,8 +1,8 @@
-"""Shared behavior contract for the embedder registry seam (ADR 0008).
+"""Shared behavior contract for the embedder registry seam.
 
-Every test takes ``embedder_registry: EmbedderRegistryProtocol`` (parametrized in ``conftest.py``)
+Every test takes ``embedder_registry: EmbedderRegistryProtocol`` (a parametrized fixture)
 and runs against every implementation, labeled ``[memory]`` / ``[db]``. What only the DB registry
-does, adding per-model columns and indexes, lives in ``test_db_embedder_registry.py``.
+does, adding per-model columns and indexes, lives in the DB-only registry tests.
 """
 
 import pytest

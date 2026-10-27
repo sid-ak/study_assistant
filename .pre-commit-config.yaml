@@ -1,4 +1,4 @@
-# Lint / format / typecheck — the same gates CI runs (see .github/workflows/ci.yaml).
+# Lint / format / typecheck — the same gates CI runs.
 # Install with: pre-commit install
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -1,7 +1,7 @@
 """Integration tests for what only the DB-backed ``EmbedderRegistry`` does: provisioning storage.
 
-Registering a model adds that model's own ``vector(N)`` column and HNSW index to ``chunks`` (ADR
-0008). The registry behavior every implementation shares lives in ``test_embedder_registry.py``.
+Registering a model adds that model's own ``vector(N)`` column and HNSW index to ``chunks``. The
+registry behavior every implementation shares lives in the registry contract suite.
 """
 
 import pytest

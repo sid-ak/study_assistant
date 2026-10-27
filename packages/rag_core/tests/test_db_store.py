@@ -1,10 +1,9 @@
 """Integration tests for behavior that only exists on the concrete, DB-backed ``Store``.
 
-Shared CRUD behavior common to every ``StoreProtocol`` implementation lives in
-`test_store.py` instead, parametrized against both `Store` and `InMemoryStore`. What stays
-here is genuinely Store-only: raw vector round-tripping through pgvector and idempotent schema DDL.
-Neither is expressible through `StoreProtocol` (`get_connection()` is deliberately absent from it
-— see `rag_core/AGENTS.md`).
+Shared CRUD behavior common to every ``StoreProtocol`` implementation lives in the store contract
+suite instead, parametrized against both `Store` and `InMemoryStore`. What stays here is genuinely
+Store-only: raw vector round-tripping through pgvector and idempotent schema DDL. Neither is
+expressible through `StoreProtocol`, which deliberately leaves out `get_connection()`.
 """
 
 import uuid

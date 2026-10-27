@@ -1,6 +1,6 @@
 """Shared behavior contract for the store seam.
 
-Every test here takes `store: StoreProtocol` (the parametrized fixture in `conftest.py`) and
+Every test here takes `store: StoreProtocol` (a parametrized fixture) and
 runs once against `InMemoryStore` and once against the real, DB-backed `Store` — labeled
 `[memory]` / `[db]` in test output. This is deliberate: `add_document`, `add_chunks`, and the rest
 of `StoreProtocol` must behave identically regardless of which implementation is behind it, and a
@@ -8,8 +8,8 @@ single shared assertion can't silently drift out of sync the way two hand-duplic
 
 Only `StoreProtocol` methods are used here — nothing peeks at implementation internals (no
 `get_connection()`, no reaching into `InMemoryStore.chunks`). Behavior that genuinely can't be
-expressed through the Protocol (raw vector round-tripping, schema DDL idempotency) stays in
-`test_db_store.py` against the concrete `Store`.
+expressed through the Protocol (raw vector round-tripping, schema DDL idempotency) stays in the
+DB-only tests against the concrete `Store`.
 """
 
 import uuid
@@ -70,7 +70,7 @@ def test_update_document_changes_filename(store: StoreProtocol) -> None:
 
 
 def test_user_id_defaults_to_settings_default(store: StoreProtocol) -> None:
-    """Omitting user_id falls back to settings.default_user_id (the ADR 0003 seam)."""
+    """Omitting user_id falls back to settings.default_user_id, the single-user default."""
     doc_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="a.md", file_hash="h")
     doc = store.get_document_by_hash("h")
