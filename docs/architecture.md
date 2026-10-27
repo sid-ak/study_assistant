@@ -73,27 +73,23 @@ architectural invariants as enforceable rules, because key properties (like deco
 discipline rather than physical service boundaries.
 
 A root AGENTS.md holds the project one-liner and entry point, while each package and service carries
-its own scoped AGENTS.md describing its surface and relationship to the rest, each paired with a
-CLAUDE.md stub. This puts focused context exactly where work happens. For example, an agent editing
+its own scoped AGENTS.md describing its surface and relationship to the rest. This puts focused context exactly where work happens. For example, an agent editing
 the MCP server is told it is a consumer of rag_core, never a reimplementer.
 
 This governance principle ensures that intentions become constraints that can be asserted by another
 coder or coding agent in the future.
 
 > NOTE  
-> The real content lives under the tool-neutral `AGENTS.md` name so any coding agent can read it;
-> `CLAUDE.md` is a thin import stub (a single `@AGENTS.md` line) that aliases it for Claude Code.
-> The `CLAUDE.md` stub is kept to play nice with Claude Code's tooling. Commands such as: `/init`
-> and `/memory` reference `CLAUDE.md` by convention, and its directory-walk loading (which pulls in
-> each scoped file exactly when an agent works in that directory) triggers on `CLAUDE.md`. Keeping
-> the stub preserves all of that while the canonical content stays under `AGENTS.md`.
+> The content lives under the tool-neutral `AGENTS.md` name so any coding agent can read it. The
+> repository deliberately has no `CLAUDE.md`: Claude Code (v2.1.277 or later) reads `AGENTS.md`
+> directly when no `CLAUDE.md` is present, including a subdirectory's `AGENTS.md` when it works on
+> files there.
 
 ## Directory
 
 ```text
 study_assistant/
 ├── AGENTS.md                    # canonical agent context — entry point, project one-liner
-├── CLAUDE.md                    # import stub (@AGENTS.md) — Claude Code alias
 ├── CONTRIBUTING.md
 ├── README.md
 ├── .env.example
@@ -108,7 +104,6 @@ study_assistant/
 ├── packages/
 │   └── rag_core/                # Shared library — all retrieval logic
 │       ├── AGENTS.md            # canonical context — chunking, lazy-load, pgvector, rerank
-│       ├── CLAUDE.md            # import stub (@AGENTS.md)
 │       ├── pyproject.toml
 │       ├── src/rag_core/
 │       │   ├── ingest/          # pptx/pdf/md parsing, semantic chunking
@@ -120,12 +115,10 @@ study_assistant/
 │       └── tests/
 │   └── rag_core_testing/        # Dev-only: in-memory fakes + test data for rag_core's protocols
 │       ├── AGENTS.md            # canonical context — fake fidelity, dev-only dependency
-│       ├── CLAUDE.md            # import stub (@AGENTS.md)
 │       ├── pyproject.toml
 │       └── src/rag_core_testing/
 ├── cli/                         # `study` ingestion CLI — depends on rag_core
 │   ├── AGENTS.md                # canonical context — CLI surface, calls into `rag_core`
-│   ├── CLAUDE.md                # import stub (@AGENTS.md)
 │   ├── pyproject.toml
 │   ├── src/study_cli/
 │   │   └── main.py              # `study` console-script entry point
@@ -133,13 +126,11 @@ study_assistant/
 ├── services/
 │   ├── mcp_server/              # wraps rag_core as MCP tools + source docs
 │   │   ├── AGENTS.md            # canonical context — MCP tool surface, citations
-│   │   ├── CLAUDE.md            # import stub (@AGENTS.md)
 │   │   ├── pyproject.toml
 │   │   ├── Dockerfile
 │   │   └── src/ + tests/
 │   └── api/                     # FastAPI + LangGraph + SSE streaming
 │       ├── AGENTS.md            # canonical context — LangGraph, HITL, SSE
-│       ├── CLAUDE.md            # import stub (@AGENTS.md)
 │       ├── pyproject.toml
 │       ├── Dockerfile
 │       └── src/api/
@@ -151,7 +142,6 @@ study_assistant/
 ├── apps/
 │   └── web/                     # React + TypeScript
 │       ├── AGENTS.md            # canonical context — citations, SSE client, TS/React
-│       ├── CLAUDE.md            # import stub (@AGENTS.md)
 │       ├── package.json
 │       ├── Dockerfile
 │       └── src/

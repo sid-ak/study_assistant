@@ -20,9 +20,10 @@ Anthropic API.
 
 ## Governance
 
-Canonical context lives in `AGENTS.md` files (tool-neutral). Each `CLAUDE.md` is a one-line
-`@AGENTS.md` import stub so Claude Code's directory-walk loading picks up the same content. Edit
-`AGENTS.md`, never the stub. Each package/service carries its own scoped `AGENTS.md` describing its
+Agent context lives only in `AGENTS.md` files (tool-neutral); the repository has no `CLAUDE.md`
+files. Claude Code reads `AGENTS.md` directly when no `CLAUDE.md` is present (v2.1.277 or later), so
+do not add one: a `CLAUDE.md` anywhere at or above the working directory makes Claude Code read it
+instead of `AGENTS.md`. Each package/service carries its own scoped `AGENTS.md` describing its
 surface; agents read the nearest file in the tree, so the closest one wins. This file is the root
 entry point — keep package-specific detail in the package's own `AGENTS.md`.
 
@@ -56,8 +57,7 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
   `.env` first — the connection string and secrets live there. The DB is required for the store
   layer and its tests.
 - New workspace members go under `packages/` (libraries) or top-level (`cli/`, `services/`,
-  `apps/web/`) per `docs/architecture.md`; each gets its own scoped `AGENTS.md` plus a one-line
-  `CLAUDE.md` stub (`@AGENTS.md`).
+  `apps/web/`) per `docs/architecture.md`; each gets its own scoped `AGENTS.md`.
 - Install hooks once with `pre-commit install`; `pre-commit run --all-files` runs lint + format +
   typecheck across the tree.
 

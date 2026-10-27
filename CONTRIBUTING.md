@@ -38,9 +38,9 @@ pre-commit install      # installs the git hooks
 ## Governance (`AGENTS.md`)
 
 Architectural invariants are encoded as scoped `AGENTS.md` files placed where the work happens.
-Canonical content lives in `AGENTS.md`; each `CLAUDE.md` is a one-line `@AGENTS.md` import stub —
-edit `AGENTS.md`, not the stub. Honor the primary conventions (retrieval lives only in `rag_core`;
-lazy `torch` loading; embedder/reranker behind an interface).
+Agent context lives only in `AGENTS.md`; the repository has no `CLAUDE.md` files. Honor the primary
+conventions (retrieval lives only in `rag_core`; lazy `torch` loading; embedder/reranker behind an
+interface).
 
 ## Architectural decisions
 
