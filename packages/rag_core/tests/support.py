@@ -4,7 +4,7 @@ import uuid
 from typing import Any
 from uuid import UUID
 
-from rag_core.store import EmbedderInfo
+from rag_core.store.embedders import EmbedderInfo
 
 # Small dimensions keep the test vectors cheap; nothing in the store depends on a production size.
 EMBEDDER_A = EmbedderInfo(model_id="test/embedder-a", dimension=8)

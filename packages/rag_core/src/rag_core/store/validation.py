@@ -3,8 +3,8 @@
 from collections.abc import Sequence
 from typing import Any
 
+from rag_core.store.embedders.protocol import EmbedderInfo
 from rag_core.store.errors import EmbedderNotFoundError, EmbeddingDimensionError
-from rag_core.store.protocol import EmbedderInfo
 
 
 def require_current(embedder: EmbedderInfo | None) -> EmbedderInfo:

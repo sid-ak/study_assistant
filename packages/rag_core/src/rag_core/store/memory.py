@@ -2,35 +2,32 @@
 
 A lightweight fake so tests that only need storage semantics — not real pgvector — run without a
 database. It mirrors the concrete ``Store``'s CRUD contract: hash-keyed idempotent document upsert,
-the chunk -> document foreign key with cascade on delete, per-model embeddings with one current
-model, and the same ``user_id`` default. It does not model vector or full-text
-search; those are exercised by the DB-backed integration tests against ``Store``.
+the chunk -> document foreign key with cascade on delete, per-model embeddings read through an
+embedder registry, and the same ``user_id`` default. It does not model vector or full-text search;
+those are exercised by the DB-backed integration tests against ``Store``.
 """
 
 from typing import Any
 from uuid import UUID
 
 from rag_core.config import settings
-from rag_core.store.errors import (
-    EmbedderConflictError,
-    EmbedderNotFoundError,
-    MissingDocumentError,
-)
-from rag_core.store.protocol import EmbedderInfo
-from rag_core.store.schema import embedding_column
+from rag_core.store.embedders import EmbedderRegistryProtocol, InMemoryEmbedderRegistry
+from rag_core.store.errors import MissingDocumentError
 from rag_core.store.validation import check_dimensions, require_current
 
 
 class InMemoryStore:
     """Dict-backed fake conforming to ``StoreProtocol``."""
 
-    def __init__(self) -> None:
-        """Start empty, keyed by document / chunk id (document rows mirror Store's SELECT shape)."""
+    def __init__(self, embedders: EmbedderRegistryProtocol | None = None) -> None:
+        """Start empty, keyed by document / chunk id (document rows mirror Store's SELECT shape).
+
+        ``embedders`` supplies the current embedder; it defaults to an in-memory registry.
+        """
+        self.embedders = embedders or InMemoryEmbedderRegistry()
         self.documents: dict[UUID, dict[str, Any]] = {}
         # Each chunk keeps an ``embeddings`` map of model id -> vector, the per-model columns.
         self.chunks: dict[UUID, dict[str, Any]] = {}
-        self.embedders: dict[str, EmbedderInfo] = {}
-        self.current_model_id: str | None = None
 
     def initialize(self) -> None:
         """No-op: an in-memory store has nothing to prepare."""
@@ -79,35 +76,6 @@ class InMemoryStore:
                 return dict(doc)
         return None
 
-    def register_embedder(self, model_id: str, dimension: int) -> None:
-        """Register a model, refusing a changed dimension or a column another model owns."""
-        registered = self.embedders.get(model_id)
-        if registered is not None:
-            if registered.dimension != dimension:
-                raise EmbedderConflictError(
-                    f"{model_id!r} is registered with dimension {registered.dimension}, "
-                    f"not {dimension}."
-                )
-            return
-        column = embedding_column(model_id)
-        if any(embedding_column(other) == column for other in self.embedders):
-            raise EmbedderConflictError(
-                f"Column {column!r} for {model_id!r} already belongs to another embedder."
-            )
-        self.embedders[model_id] = EmbedderInfo(model_id, dimension)
-
-    def set_current_embedder(self, model_id: str) -> None:
-        """Make ``model_id`` current; raises ``EmbedderNotFoundError`` if it is not registered."""
-        if model_id not in self.embedders:
-            raise EmbedderNotFoundError(f"Embedder {model_id!r} is not registered.")
-        self.current_model_id = model_id
-
-    def get_current_embedder(self) -> EmbedderInfo | None:
-        """Return the current embedder, or ``None`` if none has been set."""
-        if self.current_model_id is None:
-            return None
-        return self.embedders[self.current_model_id]
-
     def add_chunks(
         self,
         chunks: list[dict[str, Any]],
@@ -115,7 +83,7 @@ class InMemoryStore:
     ) -> None:
         """Store each chunk by id, all-or-nothing, with its embedding under the current model."""
         uid = user_id or settings.default_user_id
-        embedder = require_current(self.get_current_embedder())
+        embedder = require_current(self.embedders.get_current())
         check_dimensions(chunks, embedder)
         # Mirrors the chunks.document_id foreign key; checked before any write so a bad batch
         # leaves nothing behind, as the DB's single COPY transaction does.
@@ -139,13 +107,15 @@ class InMemoryStore:
 
         ``embedding`` is the current model's vector, or ``None`` if it has not embedded the chunk.
         """
+        current = self.embedders.get_current()
+        model_id = None if current is None else current.model_id
         return [
             {
                 "id": c["id"],
                 "document_id": c["document_id"],
                 "content": c["content"],
                 "metadata": c["metadata"],
-                "embedding": c["embeddings"].get(self.current_model_id),
+                "embedding": c["embeddings"].get(model_id),
                 "user_id": c["user_id"],
             }
             for c in self.chunks.values()

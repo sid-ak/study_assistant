@@ -38,10 +38,20 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   only what's genuinely Store-only and unexpressible through the Protocol (raw vector round-tripping,
   schema DDL idempotency), via the DB-only `db_store` fixture. A new `StoreProtocol` method's tests
   belong in `test_store.py` against `store`, not duplicated per-implementation.
-- Embeddings never go in a fixed column. `register_embedder(model_id, dimension)` adds the model's
-  own `vector(N)` column and HNSW index (named by `schema.embedding_column`), and `add_chunks` /
-  `get_chunks_by_document` use whichever model is current. Pass a dimension explicitly when
-  registering; there is no global dimension setting (ADR 0008).
+- Embeddings never go in a fixed column, and the stores never manage embedding models. That is the
+  embedder registry in `store/embedders/` (`EmbedderRegistryProtocol`, with `EmbedderRegistry` and
+  `InMemoryEmbedderRegistry`), injected into each store's constructor:
+  - `register(model_id, dimension)` records the model, and the DB registry adds its own `vector(N)`
+    column and HNSW index (named by `schema.embedding_column`). Pass the dimension explicitly;
+    there is no global dimension setting (ADR 0008).
+  - `set_current` / `get_current` pick the one model that `add_chunks` and
+    `get_chunks_by_document` write and read; the stores only call `get_current`.
+  - Its tests mirror the store layout: `test_embedder_registry.py` is the contract suite over the
+    `embedder_registry` fixture, and `test_db_embedder_registry.py` covers the columns and indexes
+    only the DB registry adds. `store` and `embedder_registry` follow one `backend` parameter, so a
+    test that uses both gets a matched pair.
+- Every DB-backed class opens connections through `store/connection.py` (`connect`,
+  `resolve_database_url`), so URL resolution and `register_vector` live in one place.
 - Raise the typed errors in `store/errors.py`, never a driver exception, from a `StoreProtocol`
   method, and put any check both stores need in `store/validation.py` so they fail identically.
   `InMemoryStore` must enforce every constraint the schema enforces (foreign key, dimension,
@@ -49,8 +59,8 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
 - Every write method takes an optional `user_id: UUID | None`, defaulting to
   `settings.default_user_id` (the ADR 0003 seam). New methods should follow the same signature
   rather than hardcoding the default user or dropping the parameter.
-- `get_connection()` calls `register_vector(conn)` so `vector` columns round-trip as numpy arrays.
-  Any code that opens its own `psycopg.connect(...)` outside `Store` must call `register_vector`
+- `connection.connect` calls `register_vector(conn)` so `vector` columns round-trip as numpy
+  arrays. Any code that opens its own `psycopg.connect(...)` instead must call `register_vector`
   itself or vector columns won't (de)serialize.
 - `add_chunks` bulk-inserts via the `COPY ... FORMAT BINARY` protocol, not per-row `INSERT` — keep
   new batch-write paths on `COPY` for the same throughput reason. It's currently all-or-nothing per

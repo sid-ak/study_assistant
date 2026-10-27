@@ -3,7 +3,7 @@
 Schema evolution has two parts:
 
 - ``Store.initialize`` runs the idempotent ``CREATE ... IF NOT EXISTS`` bootstrap below.
-- Embedding storage grows additively (ADR 0008). ``Store.register_embedder`` records each model in
+- Embedding storage grows additively (ADR 0008). ``EmbedderRegistry.register`` records each model in
   ``embedding_models`` and adds that model's own ``vector(N)`` column and HNSW index to ``chunks``,
   so a new embedder sits beside the old one instead of altering a shared column.
 
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 
 -- Chunks table: Stores semantic segments. Embeddings live in per-model columns that
--- register_embedder adds (ADR 0008), so none is declared here.
+-- EmbedderRegistry.register adds (ADR 0008), so none is declared here.
 CREATE TABLE IF NOT EXISTS chunks (
     id UUID PRIMARY KEY,
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,

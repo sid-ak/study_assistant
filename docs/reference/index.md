@@ -64,3 +64,35 @@
    :members:
    :show-inheritance:
 ```
+
+## rag_core.store.connection
+
+```{eval-rst}
+.. automodule:: rag_core.store.connection
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.store.embedders.protocol
+
+```{eval-rst}
+.. automodule:: rag_core.store.embedders.protocol
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.store.embedders.client
+
+```{eval-rst}
+.. automodule:: rag_core.store.embedders.client
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.store.embedders.memory
+
+```{eval-rst}
+.. automodule:: rag_core.store.embedders.memory
+   :members:
+   :show-inheritance:
+```

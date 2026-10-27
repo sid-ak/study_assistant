@@ -12,7 +12,14 @@ from psycopg import sql
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from support import EMBEDDER_A
 
-from rag_core.store import EmbedderInfo, InMemoryStore, Store, StoreProtocol
+from rag_core.store import InMemoryStore, Store, StoreProtocol
+from rag_core.store.connection import connect
+from rag_core.store.embedders import (
+    EmbedderInfo,
+    EmbedderRegistry,
+    EmbedderRegistryProtocol,
+    InMemoryEmbedderRegistry,
+)
 
 
 class IntegrationConfig(BaseSettings):
@@ -34,11 +41,11 @@ def integration_config() -> IntegrationConfig:
 
 
 @pytest.fixture
-def db_store(integration_config: IntegrationConfig) -> Iterator[Store]:
-    """Real, DB-backed `Store` against `TEST_DATABASE_URL`, tables truncated after each test.
+def database_url(integration_config: IntegrationConfig) -> Iterator[str]:
+    """``TEST_DATABASE_URL`` with the schema initialized; tables and embedding columns reset after.
 
-    Behavior that only the concrete `Store` has (raw vector round-tripping,
-    schema DDL). Shared `StoreProtocol` behavior uses the parametrized `store` fixture instead.
+    The DB-backed fixtures below all build on this one, so a test that uses several of them shares
+    one database and one teardown.
     """
     # Integration tests must never touch the app's real DATABASE_URL
     if integration_config.test_database_url is None:
@@ -47,10 +54,10 @@ def db_store(integration_config: IntegrationConfig) -> Iterator[Store]:
             "(never the app's DATABASE_URL). Copy .env.example to .env; the test database is "
             "provisioned automatically by infra/postgres/init.sql on `docker compose up -d`."
         )
-    s = Store(database_url=integration_config.test_database_url)
-    s.initialize()
-    yield s
-    with s.get_connection() as conn:
+    url = integration_config.test_database_url
+    Store(database_url=url, embedders=EmbedderRegistry(url)).initialize()
+    yield url
+    with connect(url) as conn:
         # Per-model columns outlive a TRUNCATE, so drop them first: a later test may register the
         # same model id with a different dimension.
         rows = conn.execute("SELECT column_name FROM embedding_models").fetchall()
@@ -64,26 +71,67 @@ def db_store(integration_config: IntegrationConfig) -> Iterator[Store]:
         conn.execute("TRUNCATE documents, chunks, embedding_models")
 
 
+@pytest.fixture
+def db_embedder_registry(database_url: str) -> EmbedderRegistry:
+    """Real, DB-backed ``EmbedderRegistry`` against the test database.
+
+    For behavior only the DB registry has (the columns and indexes it adds). Shared registry
+    behavior uses the parametrized ``embedder_registry`` fixture instead.
+    """
+    return EmbedderRegistry(database_url)
+
+
+@pytest.fixture
+def db_store(database_url: str, db_embedder_registry: EmbedderRegistry) -> Store:
+    """Real, DB-backed ``Store`` reading the current embedder from ``db_embedder_registry``.
+
+    For behavior only the concrete ``Store`` has (raw vector round-tripping, schema DDL). Shared
+    ``StoreProtocol`` behavior uses the parametrized ``store`` fixture instead.
+    """
+    return Store(database_url=database_url, embedders=db_embedder_registry)
+
+
 @pytest.fixture(
     params=[
         "memory",
         pytest.param("db", marks=pytest.mark.integration),
     ]
 )
-def store(request: pytest.FixtureRequest) -> StoreProtocol:
-    """Every ``StoreProtocol`` implementation, once each.
+def backend(request: pytest.FixtureRequest) -> str:
+    """Each storage backend, once each: ``memory`` or ``db``, the ``[memory]``/``[db]`` test ids.
 
-    Backs the contract suite.
+    ``store`` and ``embedder_registry`` both follow it, so a test using both gets a matched pair.
     """
-    if request.param == "memory":
-        return InMemoryStore()
+    param: str = request.param
+    return param
+
+
+@pytest.fixture
+def embedder_registry(backend: str, request: pytest.FixtureRequest) -> EmbedderRegistryProtocol:
+    """Every ``EmbedderRegistryProtocol`` implementation, once each; backs its contract suite."""
+    if backend == "memory":
+        return InMemoryEmbedderRegistry()
+    db_registry: EmbedderRegistry = request.getfixturevalue("db_embedder_registry")
+    return db_registry
+
+
+@pytest.fixture
+def store(
+    backend: str, embedder_registry: EmbedderRegistryProtocol, request: pytest.FixtureRequest
+) -> StoreProtocol:
+    """Every ``StoreProtocol`` implementation, once each, wired to the matching registry.
+
+    Backs the store contract suite.
+    """
+    if backend == "memory":
+        return InMemoryStore(embedders=embedder_registry)
     db_store: Store = request.getfixturevalue("db_store")
     return db_store
 
 
 @pytest.fixture
-def embedder(store: StoreProtocol) -> EmbedderInfo:
-    """``EMBEDDER_A`` registered on ``store`` and marked current, ready for ``add_chunks``."""
-    store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
-    store.set_current_embedder(EMBEDDER_A.model_id)
+def embedder(embedder_registry: EmbedderRegistryProtocol) -> EmbedderInfo:
+    """``EMBEDDER_A`` registered and marked current, ready for ``add_chunks``."""
+    embedder_registry.register(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    embedder_registry.set_current(EMBEDDER_A.model_id)
     return EMBEDDER_A
