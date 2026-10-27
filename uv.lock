@@ -5,6 +5,7 @@ requires-python = "==3.12.*"
 [manifest]
 members = [
     "rag-core",
+    "rag-core-testing",
     "study-assistant",
 ]
 
@@ -570,6 +571,17 @@ requires-dist = [
 ]
 
 [[package]]
+name = "rag-core-testing"
+version = "0.0.0"
+source = { editable = "packages/rag_core_testing" }
+dependencies = [
+    { name = "rag-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "rag-core", editable = "packages/rag_core" }]
+
+[[package]]
 name = "requests"
 version = "2.34.2"
 source = { registry = "https://pypi.org/simple" }
@@ -785,6 +797,7 @@ dev = [
     { name = "numpy" },
     { name = "pytest" },
     { name = "rag-core" },
+    { name = "rag-core-testing" },
     { name = "ruff" },
     { name = "sphinx" },
     { name = "sphinx-autobuild" },
@@ -801,6 +814,7 @@ dev = [
     { name = "numpy", specifier = ">=2.0" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "rag-core", editable = "packages/rag_core" },
+    { name = "rag-core-testing", editable = "packages/rag_core_testing" },
     { name = "ruff", specifier = ">=0.6" },
     { name = "sphinx", specifier = ">=8.0" },
     { name = "sphinx-autobuild", specifier = ">=2025.8.25" },

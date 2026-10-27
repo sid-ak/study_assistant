@@ -9,8 +9,7 @@ import pytest
 from rag_core.store.connection import connect
 from rag_core.store.embedders import EmbedderRegistry
 from rag_core.store.schema import embedding_column
-
-from support import EMBEDDER_A, EMBEDDER_B
+from rag_core_testing import EMBEDDER_A, EMBEDDER_B
 
 pytestmark = pytest.mark.integration
 

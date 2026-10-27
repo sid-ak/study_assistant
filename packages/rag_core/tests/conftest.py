@@ -18,10 +18,7 @@ from rag_core.store.embedders import (
     EmbedderRegistry,
     EmbedderRegistryProtocol,
 )
-
-from fake_embedder_registry import InMemoryEmbedderRegistry
-from fake_store import InMemoryStore
-from support import EMBEDDER_A
+from rag_core_testing import EMBEDDER_A, InMemoryEmbedderRegistry, InMemoryStore
 
 
 class IntegrationConfig(BaseSettings):

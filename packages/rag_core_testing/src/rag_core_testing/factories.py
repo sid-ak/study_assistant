@@ -1,4 +1,4 @@
-"""Test data shared by the store test modules: the embedder fixtures' models and a chunk builder."""
+"""Test data for ``rag_core``: small-dimension embedder models and a valid chunk builder."""
 
 import uuid
 from typing import Any

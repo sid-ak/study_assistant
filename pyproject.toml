@@ -16,10 +16,12 @@ members = ["packages/*"]
 # Workspace members are developed in-place; wire them in as editable sources.
 [tool.uv.sources]
 rag_core = { workspace = true }
+rag_core_testing = { workspace = true }
 
 [dependency-groups]
 dev = [
     "rag_core",
+    "rag_core_testing",
     "ruff>=0.6",
     "mypy>=1.11",
     "pytest>=8.0",
@@ -34,7 +36,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["packages/rag_core/src"]
+src = ["packages/rag_core/src", "packages/rag_core_testing/src"]
 
 [tool.ruff.lint]
 # D10x = docstring-presence rules (pydocstyle): every module, class, function, and __init__ must be
@@ -42,18 +44,13 @@ src = ["packages/rag_core/src"]
 # only presence of docstrings is enforced and not style.
 select = ["E", "F", "I", "UP", "B", "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
 
-[tool.ruff.lint.isort]
-# Helper modules in packages/rag_core/tests, imported by bare name (the tests directory is on
-# sys.path), so they sort as local imports rather than as third-party packages.
-known-local-folder = ["fake_embedder_registry", "fake_store", "support"]
-
 [tool.mypy]
 python_version = "3.12"
 strict = true
-# Resolve the src-layout package and test helpers from source so typechecking needs no install
+# Resolve the src-layout packages from source so typechecking needs no install
 # (keeps pre-commit's isolated mypy env and CI consistent).
-mypy_path = ["packages/rag_core/src", "packages/rag_core/tests"]
-files = ["packages/rag_core/src", "packages/rag_core/tests"]
+mypy_path = ["packages/rag_core/src", "packages/rag_core_testing/src"]
+files = ["packages/rag_core/src", "packages/rag_core_testing/src", "packages/rag_core/tests"]
 explicit_package_bases = true
 namespace_packages = true
 

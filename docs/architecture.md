@@ -118,6 +118,11 @@ study_assistant/
 │       │   ├── store/           # pgvector access, schema, migrations
 │       │   └── config.py
 │       └── tests/
+│   └── rag_core_testing/        # Dev-only: in-memory fakes + test data for rag_core's protocols
+│       ├── AGENTS.md            # canonical context — fake fidelity, dev-only dependency
+│       ├── CLAUDE.md            # import stub (@AGENTS.md)
+│       ├── pyproject.toml
+│       └── src/rag_core_testing/
 ├── cli/                         # `study` ingestion CLI — depends on rag_core
 │   ├── AGENTS.md                # canonical context — CLI surface, calls into `rag_core`
 │   ├── CLAUDE.md                # import stub (@AGENTS.md)

@@ -12,9 +12,7 @@ from rag_core.store.embedders import (
     EmbedderRegistry,
     EmbedderRegistryProtocol,
 )
-
-from fake_embedder_registry import InMemoryEmbedderRegistry
-from support import EMBEDDER_A, EMBEDDER_B
+from rag_core_testing import EMBEDDER_A, EMBEDDER_B, InMemoryEmbedderRegistry
 
 
 def test_current_is_none_until_set(embedder_registry: EmbedderRegistryProtocol) -> None:

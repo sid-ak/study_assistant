@@ -26,9 +26,7 @@ from rag_core.store import (
     StoreProtocol,
 )
 from rag_core.store.embedders import EmbedderInfo, EmbedderRegistryProtocol
-
-from fake_store import InMemoryStore
-from support import EMBEDDER_A, EMBEDDER_B, make_chunk
+from rag_core_testing import EMBEDDER_A, EMBEDDER_B, InMemoryStore, make_chunk
 
 
 def test_initialize_can_run_repeatedly(store: StoreProtocol) -> None:
