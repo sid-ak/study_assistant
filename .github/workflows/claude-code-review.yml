@@ -99,8 +99,8 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The prompt is written out here rather than using the code-review plugin, whose command
           # cannot be scoped: it always reviews the whole pull request through `gh pr diff`, stops
-          # when Claude has commented before, and reads CLAUDE.md files, which in this repository
-          # are only stubs importing AGENTS.md, where the conventions live.
+          # when Claude has commented before, and checks CLAUDE.md files, which this repository
+          # does not have; its conventions live in AGENTS.md.
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
