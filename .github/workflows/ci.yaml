@@ -7,7 +7,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
-# Builds and tests only — no deploy (ADR 0003: local single-user scope).
+# Builds and tests only; nothing is deployed from CI.
 jobs:
   checks:
     name: Lint, typecheck, test
@@ -15,7 +15,7 @@ jobs:
     # job reports success, which is harmless because GitHub will not merge a draft.
     if: &not-draft ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    # Integration tests (rag_core/store) run against a real pgvector instance.
+    # Integration tests run against a real pgvector instance.
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -73,6 +73,6 @@ jobs:
         run: uv sync
 
       # Build-only (no deploy) so every push/PR is checked the same way as lint/mypy/pytest.
-      # -W turns Sphinx warnings into errors. Deployment to Pages stays in docs-deploy.yaml.
+      # -W turns Sphinx warnings into errors. Deployment to Pages is a separate workflow.
       - name: Build docs
         run: uv run sphinx-build -b html docs site -W
