@@ -1,7 +1,7 @@
 """Errors raised through ``StoreProtocol``.
 
-Both implementations raise these instead of driver exceptions, so callers handle one set of
-failures whichever store is behind the protocol (ADR 0006).
+Every implementation raises these instead of its backend's own exceptions, so callers handle one
+set of failures whichever store is behind the protocol (ADR 0006).
 """
 
 

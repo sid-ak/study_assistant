@@ -1,13 +1,11 @@
 """The store interface.
 
 ``StoreProtocol`` is the structural contract retrieval and ingestion code depends on, so callers
-never bind to the concrete ``Store`` (pgvector) or to raw driver calls. ``Store`` conforms by shape,
-and ``InMemoryStore`` is a lightweight fake satisfying the same contract for unit tests with no live
-database.
+never bind to a concrete implementation or its storage backend. Implementations conform by shape;
+the ones that exist are exported from ``rag_core.store``.
 
-``get_connection`` is intentionally absent: it returns a raw ``psycopg`` connection, a driver
-dependency retrieval logic should stay clear of. Integration tests use it on the concrete ``Store``
-directly.
+The contract describes behavior only. Backend handles such as connections are deliberately not
+part of it, so code typed against the protocol cannot reach past it into a particular backend.
 """
 
 from dataclasses import dataclass
@@ -25,10 +23,10 @@ class EmbedderInfo:
 
 @runtime_checkable
 class StoreProtocol(Protocol):
-    """Structural interface for pgvector-backed document/chunk storage."""
+    """Structural interface for document and chunk storage, independent of any backend."""
 
     def initialize_schema(self) -> None:
-        """Idempotently create the extension and tables."""
+        """Idempotently prepare the backing storage for use; safe to call more than once."""
         ...
 
     def add_document(
@@ -46,7 +44,7 @@ class StoreProtocol(Protocol):
         ...
 
     def delete_document(self, id: UUID) -> None:
-        """Delete a document and its chunks (chunks cascade)."""
+        """Delete a document and every chunk that belongs to it."""
         ...
 
     def get_document_by_hash(self, file_hash: str) -> dict[str, Any] | None:

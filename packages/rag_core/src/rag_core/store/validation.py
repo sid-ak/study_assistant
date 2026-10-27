@@ -1,4 +1,4 @@
-"""Checks both ``StoreProtocol`` implementations run before writing chunks, so they fail alike."""
+"""Checks every ``StoreProtocol`` implementation runs before writing chunks, so all fail alike."""
 
 from collections.abc import Sequence
 from typing import Any
