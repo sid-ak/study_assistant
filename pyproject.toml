@@ -40,8 +40,8 @@ src = ["packages/rag_core/src", "packages/rag_core_testing/src"]
 
 [tool.ruff.lint]
 # D10x = docstring-presence rules (pydocstyle): every module, class, function, and __init__ must be
-# documented, repo-wide. The stylistic D2xx/D4xx rules are deliberately left out so existing
-# only presence of docstrings is enforced and not style.
+# documented, repo-wide. The stylistic D2xx/D4xx rules are left out, so only the presence of a
+# docstring is enforced, not its style.
 select = ["E", "F", "I", "UP", "B", "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
 
 [tool.mypy]
