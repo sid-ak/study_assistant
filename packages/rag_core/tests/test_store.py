@@ -19,13 +19,12 @@ import pytest
 
 from rag_core.config import settings
 from rag_core.store import (
-    EmbedderNotFoundError,
     EmbeddingDimensionError,
     MissingDocumentError,
     Store,
     StoreProtocol,
 )
-from rag_core.store.embedders import EmbedderInfo, EmbedderRegistryProtocol
+from rag_core.store.embedders import EmbedderRegistryProtocol
 from rag_core_testing import EMBEDDER_A, EMBEDDER_B, InMemoryStore, make_chunk
 
 
@@ -89,13 +88,11 @@ def test_user_id_override_is_honored(store: StoreProtocol) -> None:
     assert doc["user_id"] == uid
 
 
-def test_add_chunks_are_retrievable_by_document(
-    store: StoreProtocol, embedder: EmbedderInfo
-) -> None:
+def test_add_chunks_are_retrievable_by_document(store: StoreProtocol) -> None:
     """Chunks written by add_chunks come back via get_chunks_by_document, fields intact."""
     doc_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="d.md", file_hash="h")
-    chunk = make_chunk(doc_id, embedder.dimension, content="hello", metadata={"page": 1})
+    chunk = make_chunk(doc_id, store.embedder.dimension, content="hello", metadata={"page": 1})
     store.add_chunks([chunk])
 
     chunks = store.get_chunks_by_document(doc_id)
@@ -107,11 +104,11 @@ def test_add_chunks_are_retrievable_by_document(
     assert np.allclose(chunks[0]["embedding"], chunk["embedding"])
 
 
-def test_delete_document_cascades_chunks(store: StoreProtocol, embedder: EmbedderInfo) -> None:
+def test_delete_document_cascades_chunks(store: StoreProtocol) -> None:
     """Deleting a document removes it and cascades to its chunks."""
     doc_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="d.md", file_hash="h")
-    store.add_chunks([make_chunk(doc_id, embedder.dimension)])
+    store.add_chunks([make_chunk(doc_id, store.embedder.dimension)])
     assert len(store.get_chunks_by_document(doc_id)) == 1
 
     store.delete_document(doc_id)
@@ -120,17 +117,20 @@ def test_delete_document_cascades_chunks(store: StoreProtocol, embedder: Embedde
     assert store.get_chunks_by_document(doc_id) == []
 
 
-def test_add_chunks_rejects_unknown_document(store: StoreProtocol, embedder: EmbedderInfo) -> None:
+def test_add_chunks_rejects_unknown_document(store: StoreProtocol) -> None:
     """A chunk whose document_id has no document is refused, as the DB foreign key refuses it."""
     with pytest.raises(MissingDocumentError):
-        store.add_chunks([make_chunk(uuid.uuid4(), embedder.dimension)])
+        store.add_chunks([make_chunk(uuid.uuid4(), store.embedder.dimension)])
 
 
-def test_add_chunks_is_all_or_nothing(store: StoreProtocol, embedder: EmbedderInfo) -> None:
+def test_add_chunks_is_all_or_nothing(store: StoreProtocol) -> None:
     """One invalid chunk fails the whole batch, leaving none of its chunks stored."""
     doc_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="d.md", file_hash="h")
-    batch = [make_chunk(doc_id, embedder.dimension), make_chunk(uuid.uuid4(), embedder.dimension)]
+    batch = [
+        make_chunk(doc_id, store.embedder.dimension),
+        make_chunk(uuid.uuid4(), store.embedder.dimension),
+    ]
 
     with pytest.raises(MissingDocumentError):
         store.add_chunks(batch)
@@ -138,45 +138,79 @@ def test_add_chunks_is_all_or_nothing(store: StoreProtocol, embedder: EmbedderIn
     assert store.get_chunks_by_document(doc_id) == []
 
 
-def test_add_chunks_requires_a_current_embedder(store: StoreProtocol) -> None:
-    """Without a current embedder there is no column to write embeddings into."""
-    doc_id = uuid.uuid4()
-    store.add_document(id=doc_id, filename="d.md", file_hash="h")
-    with pytest.raises(EmbedderNotFoundError):
-        store.add_chunks([make_chunk(doc_id, EMBEDDER_A.dimension)])
-
-
-def test_add_chunks_rejects_wrong_dimension(store: StoreProtocol, embedder: EmbedderInfo) -> None:
-    """An embedding whose length differs from the current embedder's dimension is refused."""
+def test_add_chunks_rejects_wrong_dimension(store: StoreProtocol) -> None:
+    """An embedding whose length differs from the store's embedder dimension is refused."""
     doc_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="d.md", file_hash="h")
     with pytest.raises(EmbeddingDimensionError):
-        store.add_chunks([make_chunk(doc_id, embedder.dimension + 1)])
+        store.add_chunks([make_chunk(doc_id, store.embedder.dimension + 1)])
     assert store.get_chunks_by_document(doc_id) == []
 
 
-def test_embedder_swap_keeps_existing_embeddings(
-    store: StoreProtocol, embedder_registry: EmbedderRegistryProtocol, embedder: EmbedderInfo
+def test_store_reports_the_embedder_it_is_bound_to(store: StoreProtocol) -> None:
+    """A store exposes the model whose column it writes and reads."""
+    assert store.embedder == EMBEDDER_A
+
+
+def test_with_embedder_binds_another_model_over_the_same_data(
+    store: StoreProtocol, embedder_registry: EmbedderRegistryProtocol
 ) -> None:
-    """Adding a second embedder is additive: the first model's embeddings survive the swap."""
+    """with_embedder returns a store over the same documents and chunks, bound to another model."""
+    embedder_registry.register(EMBEDDER_B.model_id, EMBEDDER_B.dimension)
     doc_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="d.md", file_hash="h")
-    chunk = make_chunk(doc_id, embedder.dimension)
+    chunk = make_chunk(doc_id, EMBEDDER_A.dimension)
     store.add_chunks([chunk])
 
-    embedder_registry.register(EMBEDDER_B.model_id, EMBEDDER_B.dimension)
-    embedder_registry.set_current(EMBEDDER_B.model_id)
-    # Not yet backfilled under the new model.
-    assert store.get_chunks_by_document(doc_id)[0]["embedding"] is None
+    other = store.with_embedder(EMBEDDER_B)
 
-    embedder_registry.set_current(embedder.model_id)
-    assert np.allclose(store.get_chunks_by_document(doc_id)[0]["embedding"], chunk["embedding"])
+    assert other.embedder == EMBEDDER_B
+    assert store.embedder == EMBEDDER_A
+    doc = other.get_document_by_hash("h")
+    assert doc is not None and doc["id"] == doc_id
+    # The chunk is shared, but model B has not embedded it yet.
+    [shared] = other.get_chunks_by_document(doc_id)
+    assert shared["id"] == chunk["id"]
+    assert shared["embedding"] is None
+
+
+def test_stores_bound_to_different_models_keep_separate_embeddings(
+    store: StoreProtocol, embedder_registry: EmbedderRegistryProtocol
+) -> None:
+    """Writes through one model's store never change another model's embeddings (side-by-side)."""
+    embedder_registry.register(EMBEDDER_B.model_id, EMBEDDER_B.dimension)
+    other = store.with_embedder(EMBEDDER_B)
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    chunk_a = make_chunk(doc_id, EMBEDDER_A.dimension)
+    chunk_b = make_chunk(doc_id, EMBEDDER_B.dimension)
+
+    store.add_chunks([chunk_a])
+    other.add_chunks([chunk_b])
+
+    by_id_a = {c["id"]: c["embedding"] for c in store.get_chunks_by_document(doc_id)}
+    by_id_b = {c["id"]: c["embedding"] for c in other.get_chunks_by_document(doc_id)}
+    assert np.allclose(by_id_a[chunk_a["id"]], chunk_a["embedding"])
+    assert by_id_a[chunk_b["id"]] is None
+    assert np.allclose(by_id_b[chunk_b["id"]], chunk_b["embedding"])
+    assert by_id_b[chunk_a["id"]] is None
+
+
+def test_with_embedder_store_enforces_its_own_dimension(
+    store: StoreProtocol, embedder_registry: EmbedderRegistryProtocol
+) -> None:
+    """A rebound store validates embeddings against its new model's dimension, not the old one."""
+    embedder_registry.register(EMBEDDER_B.model_id, EMBEDDER_B.dimension)
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    with pytest.raises(EmbeddingDimensionError):
+        store.with_embedder(EMBEDDER_B).add_chunks([make_chunk(doc_id, EMBEDDER_A.dimension)])
 
 
 def test_both_implementations_conform_to_protocol() -> None:
     """Both Store and InMemoryStore satisfy StoreProtocol, structurally and at runtime."""
     # mypy --strict checks these assignments; the concrete Store constructs without connecting.
-    fake: StoreProtocol = InMemoryStore()
-    real: StoreProtocol = Store(database_url="postgresql://placeholder")
+    fake: StoreProtocol = InMemoryStore(embedder=EMBEDDER_A)
+    real: StoreProtocol = Store(database_url="postgresql://placeholder", embedder=EMBEDDER_A)
     assert isinstance(fake, StoreProtocol)
     assert isinstance(real, StoreProtocol)

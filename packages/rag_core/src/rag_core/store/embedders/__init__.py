@@ -1,7 +1,7 @@
 """Embedder registry: which embedding models exist, their dimensions, and which one is current.
 
-Kept apart from the document and chunk storage in ``rag_core.store`` so the store only reads the
-current embedder and never manages the registry itself (ADR 0006, ADR 0008).
+Kept apart from the document and chunk storage in ``rag_core.store``: a store is bound to one
+``EmbedderInfo`` and never touches the registry (ADR 0006, ADR 0008).
 """
 
 from rag_core.store.embedders.client import EmbedderRegistry

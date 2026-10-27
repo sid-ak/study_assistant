@@ -14,7 +14,7 @@ class MissingDocumentError(StoreError):
 
 
 class EmbedderNotFoundError(StoreError):
-    """The named embedder is not registered, or no embedder is current."""
+    """The named embedder is not registered."""
 
 
 class EmbedderConflictError(StoreError):
@@ -22,4 +22,4 @@ class EmbedderConflictError(StoreError):
 
 
 class EmbeddingDimensionError(StoreError):
-    """An embedding's length differs from the current embedder's dimension."""
+    """An embedding's length differs from the dimension of the store's embedder."""

@@ -25,3 +25,11 @@ the root [`AGENTS.md`](../../AGENTS.md) for project-wide context and
   Change a fake together with its protocol and real implementation, never on its own.
 - New fakes or factories go here rather than in a package's `tests/` directory, so a later
   workspace member (CLI, services) can reuse them.
+
+## Known gap
+
+`InMemoryStore` accepts any `EmbedderInfo`, because it has no registry to check. The DB `Store`
+raises `EmbedderNotFoundError` for a model that was never registered, since that model has no
+column. The DB behavior is pinned in `rag_core`'s `test_db_store.py` rather than the shared contract
+suite. Contract tests register a model on `embedder_registry` before binding a store to it, so the
+two stay aligned.

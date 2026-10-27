@@ -1,6 +1,6 @@
 """Store package: the ``StoreProtocol`` seam and its DB-backed implementation, ``Store``.
 
-The embedder registry the stores read the current embedder from lives in
+Each store is bound to one ``EmbedderInfo``. The registry of embedding models lives in
 ``rag_core.store.embedders``.
 """
 

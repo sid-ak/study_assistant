@@ -41,18 +41,25 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   only what's genuinely Store-only and unexpressible through the Protocol (raw vector round-tripping,
   schema DDL idempotency), via the DB-only `db_store` fixture. A new `StoreProtocol` method's tests
   belong in `test_store.py` against `store`, not duplicated per-implementation.
-- Embeddings never go in a fixed column, and the stores never manage embedding models. That is the
-  embedder registry in `store/embedders/` (`EmbedderRegistryProtocol` and `EmbedderRegistry`, with
-  the `InMemoryEmbedderRegistry` fake in `rag_core_testing`), injected into each store's constructor:
-  - `register(model_id, dimension)` records the model, and the DB registry adds its own `vector(N)`
-    column and HNSW index (named by `schema.embedding_column`). Pass the dimension explicitly;
-    there is no global dimension setting (ADR 0008).
-  - `set_current` / `get_current` pick the one model that `add_chunks` and
-    `get_chunks_by_document` write and read; the stores only call `get_current`.
-  - Its tests mirror the store layout: `test_embedder_registry.py` is the contract suite over the
-    `embedder_registry` fixture, and `test_db_embedder_registry.py` covers the columns and indexes
-    only the DB registry adds. `store` and `embedder_registry` follow one `backend` parameter, so a
-    test that uses both gets a matched pair.
+- Embeddings never go in a fixed column, and a store never manages embedding models:
+  - Each store instance is bound to one `EmbedderInfo` (model id and dimension), passed to its
+    constructor. `add_chunks` writes that model's column and `get_chunks_by_document` reads it, so
+    vectors always land in the column of the model the caller embedded them with.
+  - `store.with_embedder(other)` returns a store over the same documents and chunks bound to
+    another model, leaving the original untouched. That is how to switch models at runtime, run
+    models side by side for benchmarks, or backfill a new model's column (issue #15).
+  - The embedder registry in `store/embedders/` (`EmbedderRegistryProtocol` and
+    `EmbedderRegistry`, with the `InMemoryEmbedderRegistry` fake in `rag_core_testing`) is separate.
+    `register(model_id, dimension)` records a model, and the DB registry adds its `vector(N)` column
+    and HNSW index (named by `schema.embedding_column`). Pass the dimension explicitly; there is no
+    global dimension setting (ADR 0008). A model must be registered before a store bound to it can
+    write or read, or the DB store raises `EmbedderNotFoundError`.
+  - `set_current` / `get_current` record the default model. Stores never read it; the code that
+    assembles the application reads it once at startup to choose the `EmbedderInfo` to bind.
+  - Registry tests mirror the store layout: `test_embedder_registry.py` is the contract suite over
+    the `embedder_registry` fixture, and `test_db_embedder_registry.py` covers the columns and
+    indexes only the DB registry adds. `store` and `embedder_registry` follow one `backend`
+    parameter, so a test that registers a model can bind it with `store.with_embedder`.
 - Every DB-backed class opens connections through `store/connection.py` (`connect`,
   `resolve_database_url`), so URL resolution and `register_vector` live in one place.
 - Raise the typed errors in `store/errors.py`, never a driver exception, from a `StoreProtocol`

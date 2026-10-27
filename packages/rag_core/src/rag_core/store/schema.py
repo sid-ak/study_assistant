@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS embedding_models (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- At most one model is current: writes and reads target its column.
+-- At most one model is current: the default the application binds its stores to.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_embedding_models_current
 ON embedding_models (is_current) WHERE is_current;
 

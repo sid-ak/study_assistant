@@ -11,10 +11,25 @@ part of it, so code typed against the protocol cannot reach past it into a parti
 from typing import Any, Protocol, runtime_checkable
 from uuid import UUID
 
+from rag_core.store.embedders.protocol import EmbedderInfo
+
 
 @runtime_checkable
 class StoreProtocol(Protocol):
     """Structural interface for document and chunk storage, independent of any backend."""
+
+    @property
+    def embedder(self) -> EmbedderInfo:
+        """The embedding model this store writes and reads vectors for."""
+        ...
+
+    def with_embedder(self, embedder: EmbedderInfo) -> "StoreProtocol":
+        """Return a store over the same documents and chunks, bound to ``embedder``.
+
+        The original store is unchanged, so stores for several models can be used side by side.
+        ``embedder`` must already be registered with the embedder registry.
+        """
+        ...
 
     def initialize(self) -> None:
         """Idempotently prepare the backing storage for use; safe to call more than once."""
@@ -49,17 +64,18 @@ class StoreProtocol(Protocol):
     ) -> None:
         """Batch insert chunks: ``{id, document_id, content, metadata, embedding}``.
 
-        The embedding is stored under the current embedder of the registry the store was built
-        with (``rag_core.store.embedders``). The batch is all-or-nothing and raises
-        ``EmbedderNotFoundError`` (no current embedder), ``EmbeddingDimensionError`` (wrong
-        length), or ``MissingDocumentError`` (unknown ``document_id``).
+        The embedding is stored under this store's ``embedder``. The batch is all-or-nothing and
+        raises ``EmbedderNotFoundError`` (the embedder is not registered),
+        ``EmbeddingDimensionError`` (wrong length), or ``MissingDocumentError`` (unknown
+        ``document_id``).
         """
         ...
 
     def get_chunks_by_document(self, document_id: UUID) -> list[dict[str, Any]]:
         """Return every chunk belonging to ``document_id``, or ``[]`` if none exist.
 
-        Each chunk's ``embedding`` is the current embedder's vector, or ``None`` if that model has
-        not embedded the chunk yet.
+        Each chunk's ``embedding`` is this store's ``embedder``'s vector, or ``None`` if that model
+        has not embedded the chunk yet. Raises ``EmbedderNotFoundError`` if the embedder is not
+        registered.
         """
         ...

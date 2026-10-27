@@ -1,8 +1,9 @@
 """The embedder registry interface.
 
 ``EmbedderRegistryProtocol`` records each embedding model and its fixed vector dimension, and marks
-at most one model as current. Stores read the current model to decide where embeddings are written
-and read from; ingestion code registers models and switches between them. Implementations conform
+at most one model as current. Registering provisions storage for a model's vectors. The current
+model is the default the application binds its stores to at startup; stores themselves never read
+it. Implementations conform
 by shape; the ones that exist are exported from ``rag_core.store.embedders``.
 """
 

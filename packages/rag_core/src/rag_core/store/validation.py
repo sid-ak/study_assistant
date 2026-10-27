@@ -4,14 +4,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from rag_core.store.embedders.protocol import EmbedderInfo
-from rag_core.store.errors import EmbedderNotFoundError, EmbeddingDimensionError
-
-
-def require_current(embedder: EmbedderInfo | None) -> EmbedderInfo:
-    """Return ``embedder``, or raise ``EmbedderNotFoundError`` if no embedder is current."""
-    if embedder is None:
-        raise EmbedderNotFoundError("No current embedder; register one and set it current first.")
-    return embedder
+from rag_core.store.errors import EmbeddingDimensionError
 
 
 def check_dimensions(chunks: Sequence[dict[str, Any]], embedder: EmbedderInfo) -> None:

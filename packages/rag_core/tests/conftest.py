@@ -13,11 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_core.store import Store, StoreProtocol
 from rag_core.store.connection import connect
-from rag_core.store.embedders import (
-    EmbedderInfo,
-    EmbedderRegistry,
-    EmbedderRegistryProtocol,
-)
+from rag_core.store.embedders import EmbedderRegistry, EmbedderRegistryProtocol
 from rag_core_testing import EMBEDDER_A, InMemoryEmbedderRegistry, InMemoryStore
 
 
@@ -54,7 +50,7 @@ def database_url(integration_config: IntegrationConfig) -> Iterator[str]:
             "provisioned automatically by infra/postgres/init.sql on `docker compose up -d`."
         )
     url = integration_config.test_database_url
-    Store(database_url=url, embedders=EmbedderRegistry(url)).initialize()
+    Store(database_url=url, embedder=EMBEDDER_A).initialize()
     yield url
     with connect(url) as conn:
         # Per-model columns outlive a TRUNCATE, so drop them first: a later test may register the
@@ -82,12 +78,13 @@ def db_embedder_registry(database_url: str) -> EmbedderRegistry:
 
 @pytest.fixture
 def db_store(database_url: str, db_embedder_registry: EmbedderRegistry) -> Store:
-    """Real, DB-backed ``Store`` reading the current embedder from ``db_embedder_registry``.
+    """Real, DB-backed ``Store`` bound to ``EMBEDDER_A``, which is registered so its column exists.
 
     For behavior only the concrete ``Store`` has (raw vector round-tripping, schema DDL). Shared
     ``StoreProtocol`` behavior uses the parametrized ``store`` fixture instead.
     """
-    return Store(database_url=database_url, embedders=db_embedder_registry)
+    db_embedder_registry.register(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    return Store(database_url=database_url, embedder=EMBEDDER_A)
 
 
 @pytest.fixture(
@@ -99,7 +96,8 @@ def db_store(database_url: str, db_embedder_registry: EmbedderRegistry) -> Store
 def backend(request: pytest.FixtureRequest) -> str:
     """Each storage backend, once each: ``memory`` or ``db``, the ``[memory]``/``[db]`` test ids.
 
-    ``store`` and ``embedder_registry`` both follow it, so a test using both gets a matched pair.
+    ``store`` and ``embedder_registry`` both follow it, so a test using both gets a matched pair:
+    a model registered on ``embedder_registry`` can be bound with ``store.with_embedder``.
     """
     param: str = request.param
     return param
@@ -115,22 +113,12 @@ def embedder_registry(backend: str, request: pytest.FixtureRequest) -> EmbedderR
 
 
 @pytest.fixture
-def store(
-    backend: str, embedder_registry: EmbedderRegistryProtocol, request: pytest.FixtureRequest
-) -> StoreProtocol:
-    """Every ``StoreProtocol`` implementation, once each, wired to the matching registry.
+def store(backend: str, request: pytest.FixtureRequest) -> StoreProtocol:
+    """Every ``StoreProtocol`` implementation, once each, bound to ``EMBEDDER_A``.
 
     Backs the store contract suite.
     """
     if backend == "memory":
-        return InMemoryStore(embedders=embedder_registry)
+        return InMemoryStore(embedder=EMBEDDER_A)
     db_store: Store = request.getfixturevalue("db_store")
     return db_store
-
-
-@pytest.fixture
-def embedder(embedder_registry: EmbedderRegistryProtocol) -> EmbedderInfo:
-    """``EMBEDDER_A`` registered and marked current, ready for ``add_chunks``."""
-    embedder_registry.register(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
-    embedder_registry.set_current(EMBEDDER_A.model_id)
-    return EMBEDDER_A

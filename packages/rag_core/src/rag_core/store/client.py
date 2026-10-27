@@ -1,5 +1,7 @@
 """The concrete pgvector-backed ``Store`` — the DB implementation of ``StoreProtocol``."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
@@ -9,27 +11,36 @@ from psycopg.types.json import Jsonb
 
 from rag_core.config import settings
 from rag_core.store.connection import connect, resolve_database_url
-from rag_core.store.embedders import EmbedderRegistry, EmbedderRegistryProtocol
-from rag_core.store.errors import MissingDocumentError
+from rag_core.store.embedders import EmbedderInfo
+from rag_core.store.errors import EmbedderNotFoundError, MissingDocumentError
 from rag_core.store.schema import SCHEMA_SQL, embedding_column
-from rag_core.store.validation import check_dimensions, require_current
+from rag_core.store.validation import check_dimensions
 
 
 class Store:
     """Store client for pgvector-backed RAG storage."""
 
-    def __init__(
-        self,
-        database_url: str | None = None,
-        embedders: EmbedderRegistryProtocol | None = None,
-    ) -> None:
-        """Bind to ``database_url`` (or ``settings.database_url``); does not open a connection.
+    def __init__(self, database_url: str | None = None, *, embedder: EmbedderInfo) -> None:
+        """Bind to ``database_url`` (or ``settings.database_url``) and to ``embedder``.
 
-        ``embedders`` supplies the current embedder; it defaults to the DB-backed registry on the
-        same database.
+        Does not open a connection.
         """
         self.database_url = resolve_database_url(database_url)
-        self.embedders = embedders or EmbedderRegistry(self.database_url)
+        self.embedder = embedder
+
+    def with_embedder(self, embedder: EmbedderInfo) -> "Store":
+        """Return a store on the same database, bound to ``embedder``."""
+        return Store(self.database_url, embedder=embedder)
+
+    @contextmanager
+    def _embedder_column(self) -> Iterator[sql.Identifier]:
+        """Yield this store's embedding column, translating a missing column into a typed error."""
+        try:
+            yield sql.Identifier(embedding_column(self.embedder.model_id))
+        except psycopg.errors.UndefinedColumn as e:
+            raise EmbedderNotFoundError(
+                f"Embedder {self.embedder.model_id!r} is not registered; register it first."
+            ) from e
 
     def initialize(self) -> None:
         """Idempotently create the pgvector extension, tables, and indexes."""
@@ -96,18 +107,17 @@ class Store:
         chunks: list[dict[str, Any]],
         user_id: UUID | None = None,
     ) -> None:
-        """Batch insert chunks, writing each embedding into the current embedder's column.
+        """Batch insert chunks, writing each embedding into this store's embedder's column.
 
         Expected chunk dict: {id, document_id, content, metadata, embedding}
         """
         uid = user_id or settings.default_user_id
-        with self.get_connection() as conn:
-            embedder = require_current(self.embedders.get_current())
-            check_dimensions(chunks, embedder)
+        check_dimensions(chunks, self.embedder)
+        with self.get_connection() as conn, self._embedder_column() as column:
             copy_sql = sql.SQL(
                 "COPY chunks (id, document_id, content, metadata, {}, user_id) "
                 "FROM STDIN WITH (FORMAT BINARY)"
-            ).format(sql.Identifier(embedding_column(embedder.model_id)))
+            ).format(column)
             try:
                 with conn.cursor() as cur, cur.copy(copy_sql) as copy:
                     copy.set_types(["uuid", "uuid", "text", "jsonb", "vector", "uuid"])
@@ -128,18 +138,12 @@ class Store:
     def get_chunks_by_document(self, document_id: UUID) -> list[dict[str, Any]]:
         """Return every chunk row belonging to ``document_id``, or ``[]`` if none exist.
 
-        ``embedding`` is the current embedder's vector, or ``None`` if it has not embedded the chunk
-        or no embedder is current.
+        ``embedding`` is this store's embedder's vector, or ``None`` if it has not embedded the
+        chunk.
         """
-        with self.get_connection() as conn:
-            embedder = self.embedders.get_current()
-            embedding = (
-                sql.SQL("NULL")
-                if embedder is None
-                else sql.Identifier(embedding_column(embedder.model_id))
-            )
+        with self.get_connection() as conn, self._embedder_column() as column:
             query = sql.SQL(
                 "SELECT id, document_id, content, metadata, {} AS embedding, user_id "
                 "FROM chunks WHERE document_id = %s"
-            ).format(embedding)
+            ).format(column)
             return conn.execute(query, (document_id,)).fetchall()

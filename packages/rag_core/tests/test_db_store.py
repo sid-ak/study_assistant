@@ -13,10 +13,10 @@ import numpy as np
 import pytest
 from psycopg import sql
 
-from rag_core.store import Store
-from rag_core.store.embedders import EmbedderRegistry
+from rag_core.store import EmbedderNotFoundError, Store
+from rag_core.store.embedders import EmbedderInfo
 from rag_core.store.schema import embedding_column
-from rag_core_testing import EMBEDDER_A, make_chunk
+from rag_core_testing import make_chunk
 
 pytestmark = pytest.mark.integration
 
@@ -26,13 +26,9 @@ def test_initialize_is_idempotent_against_an_existing_schema(db_store: Store) ->
     db_store.initialize()
 
 
-def test_document_and_chunks_round_trip_vector(
-    db_store: Store, db_embedder_registry: EmbedderRegistry
-) -> None:
+def test_document_and_chunks_round_trip_vector(db_store: Store) -> None:
     """A chunk's embedding lands in its model's column and reads back as a numpy array."""
-    embedder = EMBEDDER_A
-    db_embedder_registry.register(embedder.model_id, embedder.dimension)
-    db_embedder_registry.set_current(embedder.model_id)
+    embedder = db_store.embedder
     doc_id = uuid.uuid4()
     file_hash = "test-hash-" + str(uuid.uuid4())
 
@@ -50,3 +46,14 @@ def test_document_and_chunks_round_trip_vector(
     assert row is not None
     assert row["embedding"].shape == (embedder.dimension,)
     assert np.allclose(row["embedding"], embedding)
+
+
+def test_store_bound_to_an_unregistered_model_is_refused(db_store: Store) -> None:
+    """A model with no registered column can be neither written nor read, and the error is typed."""
+    unregistered = db_store.with_embedder(EmbedderInfo(model_id="never-registered", dimension=4))
+    doc_id = uuid.uuid4()
+    unregistered.add_document(id=doc_id, filename="d.md", file_hash="h")
+    with pytest.raises(EmbedderNotFoundError):
+        unregistered.add_chunks([make_chunk(doc_id, 4)])
+    with pytest.raises(EmbedderNotFoundError):
+        unregistered.get_chunks_by_document(doc_id)
