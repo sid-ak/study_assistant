@@ -7,6 +7,7 @@ store instance, and the same ``user_id`` default. It does not model vector or fu
 those are exercised by the DB-backed integration tests against ``Store``.
 """
 
+import copy
 from typing import Any
 from uuid import UUID
 
@@ -76,7 +77,7 @@ class InMemoryStore:
         """Return a copy of the document with this file_hash, or None if absent."""
         for doc in self.documents.values():
             if doc["file_hash"] == file_hash:
-                return dict(doc)
+                return copy.deepcopy(doc)
         return None
 
     def add_chunks(
@@ -99,13 +100,13 @@ class InMemoryStore:
                 "id": chunk["id"],
                 "document_id": chunk["document_id"],
                 "content": chunk["content"],
-                "metadata": chunk["metadata"],
+                "metadata": copy.deepcopy(chunk["metadata"]),
                 "embeddings": {self.embedder.model_id: list(chunk["embedding"])},
                 "user_id": uid,
             }
 
     def get_chunks_by_document(self, document_id: UUID) -> list[dict[str, Any]]:
-        """Return copies of every chunk belonging to ``document_id``, or ``[]`` if none.
+        """Return copies of every chunk belonging to ``document_id``, in insertion order, or ``[]``.
 
         ``embedding`` is this store's model's vector, or ``None`` if it has not embedded the chunk.
         """
@@ -114,8 +115,8 @@ class InMemoryStore:
                 "id": c["id"],
                 "document_id": c["document_id"],
                 "content": c["content"],
-                "metadata": c["metadata"],
-                "embedding": c["embeddings"].get(self.embedder.model_id),
+                "metadata": copy.deepcopy(c["metadata"]),
+                "embedding": copy.deepcopy(c["embeddings"].get(self.embedder.model_id)),
                 "user_id": c["user_id"],
             }
             for c in self.chunks.values()

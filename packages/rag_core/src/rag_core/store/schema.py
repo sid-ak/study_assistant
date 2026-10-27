@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS documents (
 -- EmbedderRegistry.register adds, so none is declared here.
 CREATE TABLE IF NOT EXISTS chunks (
     id UUID PRIMARY KEY,
+    -- Insertion order: chunks are read back in the order they were added.
+    seq BIGINT GENERATED ALWAYS AS IDENTITY,
     document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     metadata JSONB NOT NULL DEFAULT '{}',
@@ -63,8 +65,8 @@ ON embedding_models (is_current) WHERE is_current;
 -- GIN index for full-text search (BM25)
 CREATE INDEX IF NOT EXISTS idx_chunks_tsv ON chunks USING gin(tsv);
 
--- Index on document_id for fast cleanup/retrieval
-CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id);
+-- Per-document lookup in insertion order, and fast cleanup on document delete
+CREATE INDEX IF NOT EXISTS idx_chunks_document_seq ON chunks(document_id, seq);
 """
 
 

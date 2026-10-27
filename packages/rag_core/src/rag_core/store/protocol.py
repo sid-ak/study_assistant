@@ -54,7 +54,10 @@ class StoreProtocol(Protocol):
         ...
 
     def get_document_by_hash(self, file_hash: str) -> dict[str, Any] | None:
-        """Find a document by its file hash, or ``None`` if absent."""
+        """Find a document by its file hash, or ``None`` if absent.
+
+        The result is a copy; mutating it does not change the stored document.
+        """
         ...
 
     def add_chunks(
@@ -73,6 +76,10 @@ class StoreProtocol(Protocol):
 
     def get_chunks_by_document(self, document_id: UUID) -> list[dict[str, Any]]:
         """Return every chunk belonging to ``document_id``, or ``[]`` if none exist.
+
+        Chunks come back in the order they were added, across batches. Each is a copy; mutating it
+        does not change the stored chunk, and the store keeps its own copy of what ``add_chunks``
+        was given.
 
         Each chunk's ``embedding`` is this store's ``embedder``'s vector, or ``None`` if that model
         has not embedded the chunk yet. Raises ``EmbedderNotFoundError`` if the embedder is not

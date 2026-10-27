@@ -207,6 +207,63 @@ def test_with_embedder_store_enforces_its_own_dimension(
         store.with_embedder(EMBEDDER_B).add_chunks([make_chunk(doc_id, EMBEDDER_A.dimension)])
 
 
+def test_returned_chunks_are_copies(store: StoreProtocol) -> None:
+    """Mutating a chunk returned by get_chunks_by_document does not change what the store holds."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    chunk = make_chunk(doc_id, store.embedder.dimension, metadata={"page": 1})
+    store.add_chunks([chunk])
+
+    [returned] = store.get_chunks_by_document(doc_id)
+    returned["metadata"]["page"] = 99
+    returned["embedding"][0] = 99.0
+
+    [again] = store.get_chunks_by_document(doc_id)
+    assert again["metadata"] == {"page": 1}
+    assert np.allclose(again["embedding"], chunk["embedding"])
+
+
+def test_stored_chunks_do_not_alias_the_input(store: StoreProtocol) -> None:
+    """Mutating a chunk dict after add_chunks does not change what the store holds."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    chunk = make_chunk(doc_id, store.embedder.dimension, metadata={"page": 1})
+    original_embedding = list(chunk["embedding"])
+    store.add_chunks([chunk])
+
+    chunk["metadata"]["page"] = 99
+    chunk["embedding"][0] = 99.0
+
+    [stored] = store.get_chunks_by_document(doc_id)
+    assert stored["metadata"] == {"page": 1}
+    assert np.allclose(stored["embedding"], original_embedding)
+
+
+def test_returned_document_is_a_copy(store: StoreProtocol) -> None:
+    """Mutating a document returned by get_document_by_hash does not change the stored document."""
+    store.add_document(id=uuid.uuid4(), filename="d.md", file_hash="h")
+    doc = store.get_document_by_hash("h")
+    assert doc is not None
+    doc["filename"] = "changed.md"
+
+    again = store.get_document_by_hash("h")
+    assert again is not None
+    assert again["filename"] == "d.md"
+
+
+def test_chunks_come_back_in_insertion_order(store: StoreProtocol) -> None:
+    """get_chunks_by_document returns chunks in the order they were added, across batches."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    # Descending ids, so insertion order differs from id order.
+    ids = [uuid.UUID(int=n) for n in (50, 40, 30, 20, 10)]
+    dimension = store.embedder.dimension
+    store.add_chunks([make_chunk(doc_id, dimension, id=i) for i in ids[:3]])
+    store.add_chunks([make_chunk(doc_id, dimension, id=i) for i in ids[3:]])
+
+    assert [c["id"] for c in store.get_chunks_by_document(doc_id)] == ids
+
+
 def test_both_implementations_conform_to_protocol() -> None:
     """Both Store and InMemoryStore satisfy StoreProtocol, structurally and at runtime."""
     # mypy --strict checks these assignments; the concrete Store constructs without connecting.

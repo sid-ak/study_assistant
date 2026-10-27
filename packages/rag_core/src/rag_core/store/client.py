@@ -144,6 +144,6 @@ class Store:
         with self.get_connection() as conn, self._embedder_column() as column:
             query = sql.SQL(
                 "SELECT id, document_id, content, metadata, {} AS embedding, user_id "
-                "FROM chunks WHERE document_id = %s"
+                "FROM chunks WHERE document_id = %s ORDER BY seq"
             ).format(column)
             return conn.execute(query, (document_id,)).fetchall()

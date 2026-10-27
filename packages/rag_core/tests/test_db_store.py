@@ -56,3 +56,18 @@ def test_store_bound_to_an_unregistered_model_is_refused(db_store: Store) -> Non
         unregistered.add_chunks([make_chunk(doc_id, 4)])
     with pytest.raises(EmbedderNotFoundError):
         unregistered.get_chunks_by_document(doc_id)
+
+
+def test_chunk_order_does_not_depend_on_physical_row_order(db_store: Store) -> None:
+    """Chunks keep insertion order even after the table is physically re-sorted by id."""
+    doc_id = uuid.uuid4()
+    db_store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    ids = [uuid.UUID(int=n) for n in (50, 40, 30, 20, 10)]
+    db_store.add_chunks([make_chunk(doc_id, db_store.embedder.dimension, id=i) for i in ids])
+
+    # CLUSTER rewrites the table in primary-key order, the reverse of insertion order here, so a
+    # query without an explicit ORDER BY would return the chunks sorted by id.
+    with db_store.get_connection() as conn:
+        conn.execute("CLUSTER chunks USING chunks_pkey")
+
+    assert [c["id"] for c in db_store.get_chunks_by_document(doc_id)] == ids
