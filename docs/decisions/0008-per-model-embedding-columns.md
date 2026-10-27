@@ -7,9 +7,9 @@
 
 [ADR 0002](0002-local-embedding-and-reranking.md) pins `bge-m3` and notes that its output dimension
 is baked into the pgvector `vector(N)` column and its index, so changing embedders means a re-embed
-plus a schema migration — the "main lock-in." Today `chunks` has a single `embedding vector(1024)`
-column with one HNSW index, and the dimension is read from the global `settings.embedding_dimension`
-at import time inside `store/schema.py`.
+plus a schema migration — the "main lock-in." When this decision was made, `chunks` had a single
+`embedding vector(N)` column with one HNSW index, where N came from the global
+`settings.embedding_dimension` (1024 for `bge-m3`), read at import time to build the schema SQL.
 
 Two problems follow from that shape:
 
@@ -49,8 +49,12 @@ Two changes, together making an embedder swap additive rather than in-place.
   fixed- dimension constraint stops applying globally to the whole table and becomes local to one
   column, so a swap is an additive column rather than a table-wide rebuild.
 - Cost while two embedders are active: extra columns and indexes, so more storage and more write
-  work during a migration. Ingestion writes and retrieval reads must target the current model's
-  column, selected by the "current" marker.
+  work during a migration.
+- Writes and reads must target the column of the model that produced the vectors. Each store
+  instance is therefore bound to one model and only ever uses that model's column. The "current"
+  marker records the default model the application binds its stores to at startup. A store for
+  another registered model can be created at runtime over the same documents and chunks, which
+  covers switching models, comparing models side by side, and backfilling a new model's column.
 - This refines the "main lock-in" framing in ADR 0002 and ADR 0006: the dimension is still fixed per
   column, but it no longer gates the whole table. The future embedding-stack change contemplated in
   Future Scope (e.g. a hosted Voyage pairing on a cloud move) is a re-embed into a new column, not a
