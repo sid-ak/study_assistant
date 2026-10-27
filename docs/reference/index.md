@@ -48,3 +48,19 @@
    :members:
    :show-inheritance:
 ```
+
+## rag_core.store.errors
+
+```{eval-rst}
+.. automodule:: rag_core.store.errors
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.store.validation
+
+```{eval-rst}
+.. automodule:: rag_core.store.validation
+   :members:
+   :show-inheritance:
+```

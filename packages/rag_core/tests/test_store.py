@@ -14,8 +14,21 @@ expressed through the Protocol (raw vector round-tripping, schema DDL idempotenc
 
 import uuid
 
+import numpy as np
+import pytest
+from support import EMBEDDER_A, EMBEDDER_B, make_chunk
+
 from rag_core.config import settings
-from rag_core.store import InMemoryStore, Store, StoreProtocol
+from rag_core.store import (
+    EmbedderConflictError,
+    EmbedderInfo,
+    EmbedderNotFoundError,
+    EmbeddingDimensionError,
+    InMemoryStore,
+    MissingDocumentError,
+    Store,
+    StoreProtocol,
+)
 
 
 def test_add_document_returns_stored_id(store: StoreProtocol) -> None:
@@ -71,53 +84,132 @@ def test_user_id_override_is_honored(store: StoreProtocol) -> None:
     assert doc["user_id"] == uid
 
 
-def test_add_chunks_are_retrievable_by_document(store: StoreProtocol) -> None:
+def test_add_chunks_are_retrievable_by_document(
+    store: StoreProtocol, embedder: EmbedderInfo
+) -> None:
     """Chunks written by add_chunks come back via get_chunks_by_document, fields intact."""
     doc_id = uuid.uuid4()
-    chunk_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="d.md", file_hash="h")
-    store.add_chunks(
-        [
-            {
-                "id": chunk_id,
-                "document_id": doc_id,
-                "content": "hello",
-                "metadata": {"page": 1},
-                "embedding": [0.0] * settings.embedding_dimension,
-            }
-        ]
-    )
+    chunk = make_chunk(doc_id, embedder.dimension, content="hello", metadata={"page": 1})
+    store.add_chunks([chunk])
 
     chunks = store.get_chunks_by_document(doc_id)
 
     assert len(chunks) == 1
-    assert chunks[0]["id"] == chunk_id
+    assert chunks[0]["id"] == chunk["id"]
     assert chunks[0]["content"] == "hello"
     assert chunks[0]["metadata"] == {"page": 1}
+    assert np.allclose(chunks[0]["embedding"], chunk["embedding"])
 
 
-def test_delete_document_cascades_chunks(store: StoreProtocol) -> None:
+def test_delete_document_cascades_chunks(store: StoreProtocol, embedder: EmbedderInfo) -> None:
     """Deleting a document removes it and cascades to its chunks."""
     doc_id = uuid.uuid4()
-    chunk_id = uuid.uuid4()
     store.add_document(id=doc_id, filename="d.md", file_hash="h")
-    store.add_chunks(
-        [
-            {
-                "id": chunk_id,
-                "document_id": doc_id,
-                "content": "chunk",
-                "metadata": {},
-                "embedding": [0.0] * settings.embedding_dimension,
-            }
-        ]
-    )
+    store.add_chunks([make_chunk(doc_id, embedder.dimension)])
     assert len(store.get_chunks_by_document(doc_id)) == 1
 
     store.delete_document(doc_id)
 
     assert store.get_document_by_hash("h") is None
     assert store.get_chunks_by_document(doc_id) == []
+
+
+def test_add_chunks_rejects_unknown_document(store: StoreProtocol, embedder: EmbedderInfo) -> None:
+    """A chunk whose document_id has no document is refused, as the DB foreign key refuses it."""
+    with pytest.raises(MissingDocumentError):
+        store.add_chunks([make_chunk(uuid.uuid4(), embedder.dimension)])
+
+
+def test_add_chunks_is_all_or_nothing(store: StoreProtocol, embedder: EmbedderInfo) -> None:
+    """One invalid chunk fails the whole batch, leaving none of its chunks stored."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    batch = [make_chunk(doc_id, embedder.dimension), make_chunk(uuid.uuid4(), embedder.dimension)]
+
+    with pytest.raises(MissingDocumentError):
+        store.add_chunks(batch)
+
+    assert store.get_chunks_by_document(doc_id) == []
+
+
+def test_current_embedder_is_none_until_set(store: StoreProtocol) -> None:
+    """A fresh store has no current embedder, and registering one does not make it current."""
+    assert store.get_current_embedder() is None
+    store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    assert store.get_current_embedder() is None
+
+
+def test_set_current_embedder_reports_model_and_dimension(store: StoreProtocol) -> None:
+    """The current embedder reads back with the dimension it was registered with."""
+    store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    store.set_current_embedder(EMBEDDER_A.model_id)
+    assert store.get_current_embedder() == EMBEDDER_A
+
+
+def test_register_embedder_is_idempotent(store: StoreProtocol) -> None:
+    """Registering the same model with the same dimension twice is a no-op."""
+    store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    store.set_current_embedder(EMBEDDER_A.model_id)
+    assert store.get_current_embedder() == EMBEDDER_A
+
+
+def test_register_embedder_rejects_a_changed_dimension(store: StoreProtocol) -> None:
+    """A registered model's dimension is fixed; re-registering it with another one is refused."""
+    store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    with pytest.raises(EmbedderConflictError):
+        store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension + 1)
+
+
+def test_set_current_embedder_rejects_unregistered_model(store: StoreProtocol) -> None:
+    """Only a registered model can become current."""
+    with pytest.raises(EmbedderNotFoundError):
+        store.set_current_embedder("never-registered")
+
+
+def test_only_one_embedder_is_current(store: StoreProtocol) -> None:
+    """Setting a new current embedder replaces the previous one."""
+    for info in (EMBEDDER_A, EMBEDDER_B):
+        store.register_embedder(info.model_id, info.dimension)
+    store.set_current_embedder(EMBEDDER_A.model_id)
+    store.set_current_embedder(EMBEDDER_B.model_id)
+    assert store.get_current_embedder() == EMBEDDER_B
+
+
+def test_add_chunks_requires_a_current_embedder(store: StoreProtocol) -> None:
+    """Without a current embedder there is no column to write embeddings into."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    with pytest.raises(EmbedderNotFoundError):
+        store.add_chunks([make_chunk(doc_id, EMBEDDER_A.dimension)])
+
+
+def test_add_chunks_rejects_wrong_dimension(store: StoreProtocol, embedder: EmbedderInfo) -> None:
+    """An embedding whose length differs from the current embedder's dimension is refused."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    with pytest.raises(EmbeddingDimensionError):
+        store.add_chunks([make_chunk(doc_id, embedder.dimension + 1)])
+    assert store.get_chunks_by_document(doc_id) == []
+
+
+def test_embedder_swap_keeps_existing_embeddings(
+    store: StoreProtocol, embedder: EmbedderInfo
+) -> None:
+    """Adding a second embedder is additive: the first model's embeddings survive the swap."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    chunk = make_chunk(doc_id, embedder.dimension)
+    store.add_chunks([chunk])
+
+    store.register_embedder(EMBEDDER_B.model_id, EMBEDDER_B.dimension)
+    store.set_current_embedder(EMBEDDER_B.model_id)
+    # Not yet backfilled under the new model.
+    assert store.get_chunks_by_document(doc_id)[0]["embedding"] is None
+
+    store.set_current_embedder(embedder.model_id)
+    assert np.allclose(store.get_chunks_by_document(doc_id)[0]["embedding"], chunk["embedding"])
 
 
 def test_both_implementations_conform_to_protocol() -> None:

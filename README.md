@@ -14,6 +14,8 @@ free; only answer generation calls the Anthropic API.
 Early scaffolding (Phase 1 — Storage + Schema). The repo contains the `uv` workspace root, the
 shared `packages/rag_core/` library with the pgvector storage layer behind a `StoreProtocol`
 interface (plus an in-memory fake for DB-free unit tests), and the Postgres + pgvector dev stack.
+Embeddings are stored in per-model columns registered at runtime (ADR 0008); re-embedding between
+models is still to come (issue #15).
 Later phases add ingestion, retrieval logic, the CLI, MCP server, FastAPI backend, and React
 frontend.
 

@@ -8,9 +8,11 @@ app's `rag_core.config.Settings`), and add more test config / fixtures here as t
 from collections.abc import Iterator
 
 import pytest
+from psycopg import sql
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from support import EMBEDDER_A
 
-from rag_core.store import InMemoryStore, Store, StoreProtocol
+from rag_core.store import EmbedderInfo, InMemoryStore, Store, StoreProtocol
 
 
 class IntegrationConfig(BaseSettings):
@@ -48,9 +50,18 @@ def db_store(integration_config: IntegrationConfig) -> Iterator[Store]:
     s = Store(database_url=integration_config.test_database_url)
     s.initialize_schema()
     yield s
-    # Clears them together without needing CASCADE for the chunks -> documents foreign key.
     with s.get_connection() as conn:
-        conn.execute("TRUNCATE documents, chunks")
+        # Per-model columns outlive a TRUNCATE, so drop them first: a later test may register the
+        # same model id with a different dimension.
+        rows = conn.execute("SELECT column_name FROM embedding_models").fetchall()
+        for row in rows:
+            conn.execute(
+                sql.SQL("ALTER TABLE chunks DROP COLUMN IF EXISTS {}").format(
+                    sql.Identifier(row["column_name"])
+                )
+            )
+        # Clears them together without needing CASCADE for the chunks -> documents foreign key.
+        conn.execute("TRUNCATE documents, chunks, embedding_models")
 
 
 @pytest.fixture(
@@ -68,3 +79,11 @@ def store(request: pytest.FixtureRequest) -> StoreProtocol:
         return InMemoryStore()
     db_store: Store = request.getfixturevalue("db_store")
     return db_store
+
+
+@pytest.fixture
+def embedder(store: StoreProtocol) -> EmbedderInfo:
+    """``EMBEDDER_A`` registered on ``store`` and marked current, ready for ``add_chunks``."""
+    store.register_embedder(EMBEDDER_A.model_id, EMBEDDER_A.dimension)
+    store.set_current_embedder(EMBEDDER_A.model_id)
+    return EMBEDDER_A

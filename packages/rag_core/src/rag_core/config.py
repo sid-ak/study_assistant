@@ -16,9 +16,6 @@ class Settings(BaseSettings):
     # Optional so components (docs, tests, etc.) can build without a real database.
     database_url: str | None = None
 
-    # Vector dimensions (pinned to bge-m3)
-    embedding_dimension: int = 1024
-
     # Default user for single-user local scope
     default_user_id: UUID = UUID("00000000-0000-0000-0000-000000000000")
 

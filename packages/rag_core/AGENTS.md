@@ -12,14 +12,10 @@ per-model embedding columns (0008).
 
 ## Known drift from ADRs
 
-One accepted ADR is still ahead of the code — don't assume the shape below already matches the ADR
-just because it's "Accepted":
-
-- **ADR 0008 (per-model embedding columns):** `config.py` still reads a single global
-  `settings.embedding_dimension`, and `schema.py` still builds one shared `embedding vector(N)`
-  column — the pre-0008 shape ADR 0008 exists to replace. Explicit per-call dimensions and
-  per-model columns aren't implemented; tracked in
-  [issue #15](https://github.com/sid-ak/study_assistant/issues/15), which is still open.
+ADR 0008 (per-model embedding columns) is implemented except for its migration tail: re-embedding
+existing chunks into a new model's column and dropping the old column are not built yet. That work
+is tracked in [issue #15](https://github.com/sid-ak/study_assistant/issues/15). Until it lands, a
+newly registered embedder only has embeddings for chunks written after it became current.
 
 ## Store conventions
 
@@ -42,6 +38,14 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   only what's genuinely Store-only and unexpressible through the Protocol (raw vector round-tripping,
   schema DDL idempotency), via the DB-only `db_store` fixture. A new `StoreProtocol` method's tests
   belong in `test_store.py` against `store`, not duplicated per-implementation.
+- Embeddings never go in a fixed column. `register_embedder(model_id, dimension)` adds the model's
+  own `vector(N)` column and HNSW index (named by `schema.embedding_column`), and `add_chunks` /
+  `get_chunks_by_document` use whichever model is current. Pass a dimension explicitly when
+  registering; there is no global dimension setting (ADR 0008).
+- Raise the typed errors in `store/errors.py`, never a driver exception, from a `StoreProtocol`
+  method, and put any check both stores need in `store/validation.py` so they fail identically.
+  `InMemoryStore` must enforce every constraint the schema enforces (foreign key, dimension,
+  all-or-nothing batches), and the contract suite pins each failure path for both stores.
 - Every write method takes an optional `user_id: UUID | None`, defaulting to
   `settings.default_user_id` (the ADR 0003 seam). New methods should follow the same signature
   rather than hardcoding the default user or dropping the parameter.
