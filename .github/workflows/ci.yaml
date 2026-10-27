@@ -3,12 +3,17 @@ name: CI
 on:
   push:
     branches: [main, dev]
+  # ready_for_review is not a default type; it runs the checks once when a draft is marked ready.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # Builds and tests only — no deploy (ADR 0003: local single-user scope).
 jobs:
   checks:
     name: Lint, typecheck, test
+    # Draft pull requests run nothing: the job is skipped until the PR is marked ready. A skipped
+    # job reports success, which is harmless because GitHub will not merge a draft.
+    if: &not-draft ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     # Integration tests (rag_core/store) run against a real pgvector instance.
     services:
@@ -53,6 +58,7 @@ jobs:
 
   docs:
     name: Docs build
+    if: *not-draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

@@ -66,6 +66,10 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
 - The CI plan is in `.github/workflows/ci.yaml`: a `checks` job (ruff lint, ruff format check, mypy,
   pytest against a pgvector service) and a `docs` job that builds the Sphinx site
   (`uv run sphinx-build -b html docs site -W`, build-only — deployment lives in `docs-deploy.yaml`).
+- Pull requests are reviewed by Claude through `.github/workflows/claude-code-review.yml`. It runs on
+  every non-draft push and posts one report per run, reviewing only the commits since its last
+  report. It needs the `CLAUDE_CODE_OAUTH_TOKEN` repository secret, and a change to the workflow
+  only takes effect once it is on `main`.
 - Run the whole suite with `uv run pytest`. Integration tests need the database — run
   `docker compose up -d` first or they fail to connect.
 - Integration tests are marked `@pytest.mark.integration`. Scope a run with `uv run pytest -m unit`
@@ -103,7 +107,7 @@ ADR before changing what it governs, and do not restate its rules here.
 
 ## PRs
 
-- Branch from `dev`, naming the branch with its GitHub issue number first (e.g. `4-embeddings` for
+- Branch from `main`, naming the branch with its GitHub issue number first (e.g. `4-embeddings` for
   issue #4) so the branch links back to its issue.
 - PR title format: `[<phase or package>] <Title>` — e.g. `[rag_core/store] Add schema + CRUD`.
 - Run the full gate green before handing off (with `docker compose up -d`):
