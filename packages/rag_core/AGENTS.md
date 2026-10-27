@@ -22,8 +22,11 @@ newly registered embedder only has embeddings for chunks written after it became
 Not ADR-level, but load-bearing for anyone adding to `store/`:
 
 - Callers depend on `StoreProtocol` (ADR 0006), not the concrete `Store` — type new consumers
-  against the `Protocol` and inject the implementation. `InMemoryStore` is the fake for DB-free unit
-  tests; the DB-backed `Store` is exercised by the `@pytest.mark.integration` tests. Keep both
+  against the `Protocol` and inject the implementation. `src/` holds only what the application
+  runs. Test fakes live in `tests/`: `fake_store.py` (`InMemoryStore`) and
+  `fake_embedder_registry.py` (`InMemoryEmbedderRegistry`) back the DB-free unit tests. The
+  DB-backed `Store` is exercised by the `@pytest.mark.integration` tests. Test helper modules are
+  imported by bare name and listed under `known-local-folder` in the root `pyproject.toml`. Keep both
   implementations and the `Protocol` in lockstep when you change a method signature — add a new
   method in three passes (tests, then the `Protocol` signature + `NotImplementedError` stubs on both
   implementations, then real logic), per the three-pass TDD rule in the root `AGENTS.md`.
@@ -39,8 +42,8 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   schema DDL idempotency), via the DB-only `db_store` fixture. A new `StoreProtocol` method's tests
   belong in `test_store.py` against `store`, not duplicated per-implementation.
 - Embeddings never go in a fixed column, and the stores never manage embedding models. That is the
-  embedder registry in `store/embedders/` (`EmbedderRegistryProtocol`, with `EmbedderRegistry` and
-  `InMemoryEmbedderRegistry`), injected into each store's constructor:
+  embedder registry in `store/embedders/` (`EmbedderRegistryProtocol` and `EmbedderRegistry`, with
+  the `InMemoryEmbedderRegistry` fake in `tests/`), injected into each store's constructor:
   - `register(model_id, dimension)` records the model, and the DB registry adds its own `vector(N)`
     column and HNSW index (named by `schema.embedding_column`). Pass the dimension explicitly;
     there is no global dimension setting (ADR 0008).

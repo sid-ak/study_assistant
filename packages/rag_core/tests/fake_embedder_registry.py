@@ -1,4 +1,4 @@
-"""In-memory ``EmbedderRegistryProtocol`` implementation for unit tests."""
+"""In-memory ``EmbedderRegistryProtocol`` fake for unit tests; lives with the tests, not in core."""
 
 from rag_core.store.embedders.protocol import EmbedderInfo
 from rag_core.store.errors import EmbedderConflictError, EmbedderNotFoundError

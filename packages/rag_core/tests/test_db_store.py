@@ -12,11 +12,12 @@ import uuid
 import numpy as np
 import pytest
 from psycopg import sql
-from support import EMBEDDER_A, make_chunk
 
 from rag_core.store import Store
 from rag_core.store.embedders import EmbedderRegistry
 from rag_core.store.schema import embedding_column
+
+from support import EMBEDDER_A, make_chunk
 
 pytestmark = pytest.mark.integration
 

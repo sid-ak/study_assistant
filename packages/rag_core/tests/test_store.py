@@ -16,18 +16,19 @@ import uuid
 
 import numpy as np
 import pytest
-from support import EMBEDDER_A, EMBEDDER_B, make_chunk
 
 from rag_core.config import settings
 from rag_core.store import (
     EmbedderNotFoundError,
     EmbeddingDimensionError,
-    InMemoryStore,
     MissingDocumentError,
     Store,
     StoreProtocol,
 )
 from rag_core.store.embedders import EmbedderInfo, EmbedderRegistryProtocol
+
+from fake_store import InMemoryStore
+from support import EMBEDDER_A, EMBEDDER_B, make_chunk
 
 
 def test_initialize_can_run_repeatedly(store: StoreProtocol) -> None:

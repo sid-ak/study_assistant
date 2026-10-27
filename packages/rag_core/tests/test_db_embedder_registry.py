@@ -5,11 +5,12 @@ Registering a model adds that model's own ``vector(N)`` column and HNSW index to
 """
 
 import pytest
-from support import EMBEDDER_A, EMBEDDER_B
 
 from rag_core.store.connection import connect
 from rag_core.store.embedders import EmbedderRegistry
 from rag_core.store.schema import embedding_column
+
+from support import EMBEDDER_A, EMBEDDER_B
 
 pytestmark = pytest.mark.integration
 

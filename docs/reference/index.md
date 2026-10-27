@@ -33,14 +33,6 @@
    :show-inheritance:
 ```
 
-## rag_core.store.memory
-
-```{eval-rst}
-.. automodule:: rag_core.store.memory
-   :members:
-   :show-inheritance:
-```
-
 ## rag_core.store.schema
 
 ```{eval-rst}
@@ -85,14 +77,6 @@
 
 ```{eval-rst}
 .. automodule:: rag_core.store.embedders.client
-   :members:
-   :show-inheritance:
-```
-
-## rag_core.store.embedders.memory
-
-```{eval-rst}
-.. automodule:: rag_core.store.embedders.memory
    :members:
    :show-inheritance:
 ```

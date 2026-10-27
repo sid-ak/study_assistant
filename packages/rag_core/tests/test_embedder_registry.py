@@ -6,14 +6,15 @@ does, adding per-model columns and indexes, lives in ``test_db_embedder_registry
 """
 
 import pytest
-from support import EMBEDDER_A, EMBEDDER_B
 
 from rag_core.store import EmbedderConflictError, EmbedderNotFoundError
 from rag_core.store.embedders import (
     EmbedderRegistry,
     EmbedderRegistryProtocol,
-    InMemoryEmbedderRegistry,
 )
+
+from fake_embedder_registry import InMemoryEmbedderRegistry
+from support import EMBEDDER_A, EMBEDDER_B
 
 
 def test_current_is_none_until_set(embedder_registry: EmbedderRegistryProtocol) -> None:

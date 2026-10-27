@@ -10,16 +10,18 @@ from collections.abc import Iterator
 import pytest
 from psycopg import sql
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from support import EMBEDDER_A
 
-from rag_core.store import InMemoryStore, Store, StoreProtocol
+from rag_core.store import Store, StoreProtocol
 from rag_core.store.connection import connect
 from rag_core.store.embedders import (
     EmbedderInfo,
     EmbedderRegistry,
     EmbedderRegistryProtocol,
-    InMemoryEmbedderRegistry,
 )
+
+from fake_embedder_registry import InMemoryEmbedderRegistry
+from fake_store import InMemoryStore
+from support import EMBEDDER_A
 
 
 class IntegrationConfig(BaseSettings):

@@ -1,4 +1,4 @@
-"""In-memory ``StoreProtocol`` implementation for unit tests.
+"""In-memory ``StoreProtocol`` fake for unit tests; lives with the tests, not the library.
 
 A lightweight fake so tests that only need storage semantics — not real pgvector — run without a
 database. It mirrors the concrete ``Store``'s CRUD contract: hash-keyed idempotent document upsert,
@@ -11,9 +11,11 @@ from typing import Any
 from uuid import UUID
 
 from rag_core.config import settings
-from rag_core.store.embedders import EmbedderRegistryProtocol, InMemoryEmbedderRegistry
+from rag_core.store.embedders import EmbedderRegistryProtocol
 from rag_core.store.errors import MissingDocumentError
 from rag_core.store.validation import check_dimensions, require_current
+
+from fake_embedder_registry import InMemoryEmbedderRegistry
 
 
 class InMemoryStore:

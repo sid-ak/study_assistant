@@ -42,6 +42,11 @@ src = ["packages/rag_core/src"]
 # only presence of docstrings is enforced and not style.
 select = ["E", "F", "I", "UP", "B", "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
 
+[tool.ruff.lint.isort]
+# Helper modules in packages/rag_core/tests, imported by bare name (the tests directory is on
+# sys.path), so they sort as local imports rather than as third-party packages.
+known-local-folder = ["fake_embedder_registry", "fake_store", "support"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
