@@ -13,6 +13,14 @@ architecture.md
 
 ```{toctree}
 :hidden:
+:maxdepth: 2
+:caption: API
+
+reference/index.md
+```
+
+```{toctree}
+:hidden:
 :maxdepth: 1
 :caption: Decisions (ADRs)
 
@@ -23,12 +31,7 @@ decisions/0002-local-embedding-and-reranking.md
 decisions/0003-local-single-user-scope.md
 decisions/0004-cli-batch-ingestion.md
 decisions/0005-documentation-tooling.md
-```
-
-```{toctree}
-:hidden:
-:maxdepth: 2
-:caption: API Reference
-
-reference/index.md
+decisions/0006-interface-first-architecture.md
+decisions/0007-generation-backend.md
+decisions/0008-per-model-embedding-columns.md
 ```

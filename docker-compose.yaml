@@ -1,4 +1,4 @@
-# Local dev stack. Single Postgres + pgvector store (see ADR 0000, ADR 0002).
+# Local dev stack. Single Postgres + pgvector store.
 # Reads credentials from .env (copy .env.example -> .env first).
 services:
   db:

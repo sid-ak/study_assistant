@@ -1,4 +1,4 @@
-# 0. Stack: Python, FastAPI, React, PostgreSQL
+# 0. Stack
 
 - Status: Accepted
 - Date: 2026-06-22
