@@ -1,4 +1,4 @@
-# 3. Deployment scope: local single-user
+# 3. Deployment
 
 - Status: Accepted
 - Date: 2026-06-13

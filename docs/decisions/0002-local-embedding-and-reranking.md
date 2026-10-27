@@ -1,12 +1,12 @@
-# 2. Embedding and reranking stack: local open-source models
+# 2. Embedding and Reranking
 
 - Status: Accepted
 - Date: 2026-06-13
 
 ## Context
 
-Claude has no embeddings endpoint, so the retrieval stack is an independent vendor/tech choice with
-two distinct stages:
+The generation model provides no embeddings endpoint, so the retrieval stack is an independent
+vendor/tech choice with two distinct stages:
 
 - Embedding — turns each chunk and each query into a vector stored in pgvector; powers the dense
   half of hybrid search.
