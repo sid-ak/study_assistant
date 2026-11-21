@@ -4,7 +4,7 @@ Goal: take the study assistant from scaffolding to a small, runnable, measurable
 
 Guiding rule: minimal drift. Every line of code lands where `docs/architecture.md` places it, follows the ADRs and the root `AGENTS.md` rules, and every new design idea is recorded in an ADR. Anything the architecture describes but the MVP does not build is unfinished work, listed under Next Steps, not a deviation. The one known drift is the corpus, described below.
 
-The MVP is split into four work chunks. Each chunk ends in something that runs on its own, so the project is in a usable state after every chunk.
+The MVP is split into five work chunks. Each chunk ends in something that runs on its own, so the project is in a usable state after every chunk.
 
 ---
 
@@ -17,7 +17,7 @@ The design is complete and the storage layer is built. Nothing yet ingests, sear
 - Postgres 16 + pgvector dev stack via Docker Compose.
 - CI on GitHub Actions: Ruff lint and format, mypy, pytest. Pre-commit hooks mirror it.
 - Automated Claude code review on pull requests, and a docs site deployed from `main`.
-- Architecture doc and nine ADRs (0000 to 0008) covering the stack, the `rag_core` retrieval boundary, local embedding and reranking (`bge-m3`, `bge-reranker-v2-m3`), CLI batch ingestion, interface-first design, the generation backend, and per-model embedding columns.
+- Architecture doc and ten ADRs (0000 to 0009) covering the stack, the `rag_core` retrieval boundary, local embedding and reranking (`bge-m3`, `bge-reranker-v2-m3`), CLI batch ingestion, interface-first design, the generation backend, per-model embedding columns, and the MVP corpus.
 - Layered `AGENTS.md` files that encode architectural rules per package.
 
 **On branch `2-phase-1-storage-and-schema` (Phase 1, not yet merged)**
@@ -35,7 +35,7 @@ The design is complete and the storage layer is built. Nothing yet ingests, sear
 - The golden-set eval harness described in the architecture doc.
 
 **Known pre-existing drift**
-- README.md and the root AGENTS.md say generation calls the Anthropic API. ADR 0007 replaced that with a vendor-neutral, OpenAI-compatible adapter defaulting to a local model. Chunk 2 fixes the docs.
+- README.md and the root AGENTS.md say generation calls the Anthropic API. ADR 0007 replaced that with a vendor-neutral, OpenAI-compatible adapter defaulting to a local model. Chunk 3 fixes the docs.
 
 **Before Chunk 1**
 Merge the Phase 1 branch. Every chunk below builds on that storage layer instead of rebuilding it.
@@ -59,7 +59,7 @@ These come from the root `AGENTS.md` and apply throughout.
 
 A markdown-only, release-engineering corpus: build-system documentation (CMake/Bazel), release notes, and CI failure write-ups that each capture a failing log excerpt, its cause, and its fix.
 
-> **DRIFT**
+> **DRIFT** (recorded in [ADR 0009](decisions/0009-mvp-corpus.md))
 > The architecture defines the corpus as course materials (lecture slides, papers, notes in pptx, pdf, and md), with citations back to the exact slide or page. The MVP instead indexes release-engineering documentation, with citations at the level of a markdown section.
 >
 > - **What is unaffected:** the pipeline itself. No code is specific to either domain, and markdown is already a supported format, so no new parser is needed.
@@ -76,10 +76,11 @@ Markdown documents go in through the `study ingest` command, get chunked and emb
 **Tasks**
 - `rag_core/ingest/`: markdown parser and the first stage of the semantic chunker, heading-aware splitting. Every chunk keeps its source document and section heading in `metadata`.
 - `rag_core/embed/`: an `Embedder` Protocol, a `bge-m3` implementation with lazy model loading, and a fake in `rag_core_testing`.
-- `rag_core/store/`: add a query method to `StoreProtocol` that ranks chunks against a query vector. Implement it in the pgvector `Store` and the in-memory fake, with tests parametrized against the Protocol.
+- `rag_core/store/`: add a query method to `StoreProtocol` that ranks chunks against a query vector. The store owns the SQL. Implement it in the pgvector `Store` and the in-memory fake, with tests parametrized against the Protocol.
+- `rag_core/retrieve/`: a dense retrieval function that embeds the query and calls the store's query method. This is the retrieval entry point for every caller; the CLI, the eval harness, and the MCP server never call the store's query method directly. Hybrid retrieval later grows here without changing those callers.
 - `cli/`: a new workspace package exposing the `study` console script with `study ingest <folder>`, a thin entry point over `rag_core`. Include its `AGENTS.md`.
 - Register `bge-m3` (dimension 1024) and mark it current on first ingest.
-- A query path that prints chunk IDs, cosine distances, and latency in milliseconds.
+- A query path, through `rag_core/retrieve/`, that prints chunk IDs, cosine distances, and latency in milliseconds.
 - Retrieval experiments vary `ef_search` only. `m` and `ef_construction` stay at the registry defaults.
 
 **Done when**
@@ -95,23 +96,47 @@ This is the foundation every later chunk depends on, built in the modules the ar
 
 ---
 
-## Chunk 2: Bounded Agent over MCP
+## Chunk 2: Evaluation Harness
+
+**What it achieves**
+A golden-set eval harness (ADR 0002) that measures retrieval quality and latency against the dense retrieval built in Chunk 1. It becomes the baseline every later chunk is measured against.
+
+**Tasks**
+- `evals/`: a new workspace member, placed as in `docs/architecture.md`, depending on `rag_core`. Include its `AGENTS.md`.
+- Write 10 golden questions in `evals/golden/`. Label each expected answer by source document and section heading, not chunk ID, so labels survive re-chunking.
+- A pytest or CLI runner that calls `rag_core/retrieve/` and reports Recall@5 and p50 and p95 latency. Results are written to `evals/results/` so runs can be compared.
+- Record the dense-only baseline run.
+
+**Done when**
+One command runs the eval suite against the ingested corpus, and the dense-only baseline is saved in `evals/results/`.
+
+**Value to the project**
+Every later change can be measured from here on, starting with the agent and the reranker.
+
+**Learning value**
+- Building golden sets that survive refactors.
+- Reading retrieval quality as recall at a fixed K, and latency as p95 rather than averages.
+
+---
+
+## Chunk 3: Bounded Agent over MCP
 
 **What it achieves**
 A LangGraph agent that reaches retrieval only through the MCP server (ADR 0001), generates through a vendor-neutral `Generator` (ADR 0007), loops at most twice, and returns structured, cited answers.
 
 **Tasks**
-- `services/mcp_server/`: a minimal MCP server exposing one `search` tool that calls `rag_core`. It is a consumer of `rag_core`, never a reimplementer. Include its `AGENTS.md`.
-- `Generator` Protocol with one OpenAI-compatible adapter, pointed at a local runtime (Ollama) by default. The model is chosen in config. Add a fake for tests.
+- `services/mcp_server/`: a minimal MCP server exposing one `search` tool that calls `rag_core/retrieve/`. It is a consumer of `rag_core`, never a reimplementer. Include its `AGENTS.md`.
+- `services/api/src/api/generate/`: the `Generator` Protocol with one OpenAI-compatible adapter, pointed at a local runtime (Ollama) by default. The model is chosen in config. Its fake lives in `services/api/tests/`, since `rag_core_testing` holds fakes for `rag_core` protocols only.
 - `services/api/src/api/mcp_client/`: the client the graph uses to call the MCP server.
 - `services/api/src/api/graph/`: the state machine `retrieve -> grade_relevance -> generate`, or `rewrite_query -> retrieve`. No FastAPI routes yet. Include the `services/api` `AGENTS.md`.
 - Max-2-hop guardrail. After the limit, return the best grounded answer or an explicit "insufficient context" result.
 - Structured output: the answer plus the list of cited chunk IDs.
-- Write ADR 0009 recording the bounded corrective loop, the hop limit, and cited structured output.
+- Extend the Chunk 2 harness with a citation-grounding pass rate: every cited ID must exist in the retrieved context.
+- Write ADR 0010 recording the bounded corrective loop, the hop limit, and cited structured output.
 - Fix README.md and the root AGENTS.md to match ADR 0007.
 
 **Done when**
-A question about the corpus produces a cited answer in at most two hops, entirely through the MCP tool, and an unanswerable question ends cleanly.
+A question about the corpus produces a cited answer in at most two hops, entirely through the MCP tool, an unanswerable question ends cleanly, and the harness reports the citation-grounding pass rate.
 
 **Value to the project**
 The generation lane exists in its intended shape: decoupled retrieval, a swappable model, and predictable, bounded behavior.
@@ -120,35 +145,32 @@ The generation lane exists in its intended shape: decoupled retrieval, a swappab
 - Designing agents as explicit, bounded state machines instead of open-ended loops.
 - How MCP separates tool implementation from agent logic.
 - How open-weight models differ in tool calling and structured output reliability.
+- Separating retrieval quality from generation quality.
 
 ---
 
-## Chunk 3: Evaluation Harness and Reranking
+## Chunk 4: Reranking
 
 **What it achieves**
-A golden-set eval harness (ADR 0002) that measures retrieval and generation, and a cross-encoder reranker whose effect is proven by the numbers.
+A cross-encoder reranker (ADR 0002) whose effect is proven by the Chunk 2 harness.
 
 **Tasks**
-- Add `evals/` to the directory layout in `docs/architecture.md`, then create it.
-- Write 10 golden questions. Label each expected answer by source document and section heading, not chunk ID, so labels survive re-chunking.
-- A pytest or CLI runner that reports Recall@5, p50 and p95 latency, and the citation-grounding pass rate (every cited ID must exist in the retrieved context). Results are written to a file so runs can be compared.
-- `rag_core/rerank/`: a `Reranker` Protocol, a `bge-reranker-v2-m3` implementation with lazy loading and a configurable candidate count, and a fake.
-- Run the evals with and without reranking and record both results.
+- `rag_core/rerank/`: a `Reranker` Protocol, a `bge-reranker-v2-m3` implementation with lazy loading and a configurable candidate count, and a fake in `rag_core_testing`.
+- Wire the reranker into `rag_core/retrieve/` behind a setting, so retrieval can run with or without it.
+- Run the evals with and without reranking and record both results in `evals/results/`.
 
 **Done when**
-One command runs the full eval suite, and the saved results show the before/after effect of reranking.
+The saved results show the before/after effect of reranking on Recall@5, latency, and citation grounding.
 
 **Value to the project**
-Every later change can be measured. The reranker, the design's highest-leverage quality lever, is in place with evidence for it.
+The reranker, the design's highest-leverage quality lever, is in place with evidence for it.
 
 **Learning value**
-- Separating retrieval quality from generation quality.
-- Building golden sets that survive refactors.
 - The latency cost of cross-encoder reranking versus its quality gain, read from p95 rather than averages.
 
 ---
 
-## Chunk 4: Code Freeze and Walkthrough
+## Chunk 5: Code Freeze and Walkthrough
 
 **What it achieves**
 A clean, runnable repository that matches its own documentation, and a short, sharp explanation of the system.
@@ -158,8 +180,8 @@ A clean, runnable repository that matches its own documentation, and a short, sh
 - Run the full gate: Ruff, mypy, pytest (unit and integration), and the Sphinx build.
 - Confirm a fresh clone can run ingestion, a query, the agent, and the evals by following the README.
 - Update the README Status blurb, setup steps, and latest eval results.
-- Check the code against the architecture directory layout and ADRs 0000 to 0009 one last time.
-- Prepare a short walkthrough: ingestion and retrieval, the bounded agent over MCP, then the eval and reranking results.
+- Check the code against the architecture directory layout and ADRs 0000 to 0010 one last time.
+- Prepare a short walkthrough: ingestion and retrieval, the eval baseline, the bounded agent over MCP, then the reranking results.
 
 **Done when**
 The repo runs from a clean checkout, the docs match the code, and the walkthrough can be delivered without notes.
@@ -178,10 +200,12 @@ The project becomes something another person can run, review, and trust.
 If time runs short, cut in this order. Each cut becomes a Next Steps item, not drift.
 
 1. Golden set from 10 questions to 6.
-2. The reranker in Chunk 3. Keep the harness; reranking moves to Next Steps.
+2. The reranker in Chunk 4. Keep the harness; reranking moves to Next Steps.
 3. Latency percentiles. Keep Recall@5 and citation grounding.
 
-Never cut the MCP path in Chunk 2. A direct `rag_core` import from the graph would contradict ADR 0001.
+Never cut the eval harness in Chunk 2. Every later chunk is measured against it.
+
+Never cut the MCP path in Chunk 3. A direct `rag_core` import from the graph would contradict ADR 0001.
 
 ---
 

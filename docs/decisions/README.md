@@ -18,3 +18,4 @@ phased build plan is tracked as
 | [0006](0006-interface-first-architecture.md)  | Interface-first architecture: `Protocol`s + implementations | Accepted |
 | [0007](0007-generation-backend.md)            | Generation backend: vendor-neutral, OpenAI-compatible       | Accepted |
 | [0008](0008-per-model-embedding-columns.md)   | Per-model embedding columns (additive embedder swaps)       | Accepted |
+| [0009](0009-mvp-corpus.md)                    | MVP corpus: release-engineering markdown                    | Accepted |
