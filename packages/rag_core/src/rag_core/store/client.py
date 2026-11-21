@@ -101,7 +101,6 @@ class Store:
             )
             return cur.fetchone()
 
-    # TODO: Consider handling partial success in batch inserts.
     def add_chunks(
         self,
         chunks: list[dict[str, Any]],

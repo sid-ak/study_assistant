@@ -60,6 +60,9 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
     the `embedder_registry` fixture, and `test_db_embedder_registry.py` covers the columns and
     indexes only the DB registry adds. `store` and `embedder_registry` follow one `backend`
     parameter, so a test that registers a model can bind it with `store.with_embedder`.
+- Schema changes need a fresh DB: `Store.initialize()` is `CREATE ... IF NOT EXISTS` and will not
+  retrofit constraints, so run `docker compose down -v && docker compose up -d` after editing
+  `store/schema.py`.
 - Every DB-backed class opens connections through `store/connection.py` (`connect`,
   `resolve_database_url`), so URL resolution and `register_vector` live in one place.
 - Raise the typed errors in `store/errors.py`, never a driver exception, from a `StoreProtocol`
@@ -73,5 +76,5 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   arrays. Any code that opens its own `psycopg.connect(...)` instead must call `register_vector`
   itself or vector columns won't (de)serialize.
 - `add_chunks` bulk-inserts via the `COPY ... FORMAT BINARY` protocol, not per-row `INSERT` — keep
-  new batch-write paths on `COPY` for the same throughput reason. It's currently all-or-nothing per
-  batch (see the TODO in `client.py`); don't assume partial-failure handling exists.
+  new batch-write paths on `COPY` for the same throughput reason. Each batch is all-or-nothing,
+  pinned for both stores by `test_add_chunks_is_all_or_nothing`, so a failed batch writes nothing.

@@ -7,7 +7,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
-# Builds and tests only; nothing is deployed from CI.
+# Builds and tests only; nothing is deployed from CI, so the token only needs to read the repo.
+permissions:
+  contents: read
+
 jobs:
   checks:
     name: Lint, typecheck, test
@@ -20,9 +23,9 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: study
-          POSTGRES_PASSWORD: change-me
           POSTGRES_DB: study_assistant_test
+          POSTGRES_PASSWORD: change-me
+          POSTGRES_USER: study
         ports:
           - 5432:5432
         options: >-
