@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Second database on the same instance, used only by integration tests so their table-wide
 -- teardown never touches real ingested data. POSTGRES_DB auto-creates only one database, so the
--- test database must be created explicitly here. Keep this name in sync with POSTGRES_TEST_DB /
--- TEST_DATABASE_URL in .env. The pgvector extension is created inside it by
--- Store.initialize() when the tests first connect.
+-- test database must be created explicitly here. Keep this name in sync with TEST_DATABASE_URL in
+-- .env and the Postgres service in .github/workflows/ci.yaml. The pgvector extension is created
+-- inside it by Store.initialize() when the tests first connect.
 CREATE DATABASE study_assistant_test;
