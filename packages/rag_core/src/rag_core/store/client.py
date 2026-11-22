@@ -12,7 +12,11 @@ from psycopg.types.json import Jsonb
 from rag_core.config import settings
 from rag_core.store.connection import connect, resolve_database_url
 from rag_core.store.embedders import EmbedderInfo
-from rag_core.store.errors import EmbedderNotFoundError, MissingDocumentError
+from rag_core.store.errors import (
+    DuplicateIdError,
+    EmbedderNotFoundError,
+    MissingDocumentError,
+)
 from rag_core.store.schema import SCHEMA_SQL, embedding_column
 from rag_core.store.validation import check_dimensions
 
@@ -62,18 +66,24 @@ class Store:
 
         On re-ingest of the same ``file_hash`` the existing row is kept (its id is
         returned and the filename refreshed), so callers can re-run ingestion safely.
+        Raises ``DuplicateIdError`` if ``id`` belongs to a document with another file hash.
         """
         uid = user_id or settings.default_user_id
         with self.get_connection() as conn:
-            cur = conn.execute(
-                """
-                INSERT INTO documents (id, filename, file_hash, user_id)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (file_hash) DO UPDATE SET filename = EXCLUDED.filename
-                RETURNING id
-                """,
-                (id, filename, file_hash, uid),
-            )
+            try:
+                cur = conn.execute(
+                    """
+                    INSERT INTO documents (id, filename, file_hash, user_id)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (file_hash) DO UPDATE SET filename = EXCLUDED.filename
+                    RETURNING id
+                    """,
+                    (id, filename, file_hash, uid),
+                )
+            # ON CONFLICT handles a clash on file_hash, so the only unique violation left is
+            # the primary key: ``id`` is already taken by a document with another file hash.
+            except psycopg.errors.UniqueViolation as e:
+                raise DuplicateIdError(str(e)) from e
             row = cur.fetchone()
             assert row is not None  # RETURNING on upsert always yields a row
             stored_id: UUID = row["id"]
@@ -133,6 +143,10 @@ class Store:
                         )
             except psycopg.errors.ForeignKeyViolation as e:
                 raise MissingDocumentError(str(e)) from e
+            # The primary key is the only unique constraint on chunks, so this is a chunk id
+            # that is already stored or repeats within the batch.
+            except psycopg.errors.UniqueViolation as e:
+                raise DuplicateIdError(str(e)) from e
 
     def get_chunks_by_document(self, document_id: UUID) -> list[dict[str, Any]]:
         """Return every chunk row belonging to ``document_id``, or ``[]`` if none exist.

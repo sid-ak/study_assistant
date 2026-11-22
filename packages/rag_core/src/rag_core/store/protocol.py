@@ -42,7 +42,12 @@ class StoreProtocol(Protocol):
         file_hash: str,
         user_id: UUID | None = None,
     ) -> UUID:
-        """Insert document metadata idempotently, returning the stored document id."""
+        """Insert document metadata idempotently, returning the stored document id.
+
+        Re-adding a ``file_hash`` that is already stored keeps that document's id and refreshes
+        its filename. Raises ``DuplicateIdError`` if ``id`` belongs to a document with another
+        ``file_hash``; the stored document is left unchanged.
+        """
         ...
 
     def update_document(self, id: UUID, filename: str) -> None:
@@ -69,8 +74,9 @@ class StoreProtocol(Protocol):
 
         The embedding is stored under this store's ``embedder``. The batch is all-or-nothing and
         raises ``EmbedderNotFoundError`` (the embedder is not registered),
-        ``EmbeddingDimensionError`` (wrong length), or ``MissingDocumentError`` (unknown
-        ``document_id``).
+        ``EmbeddingDimensionError`` (wrong length), ``MissingDocumentError`` (unknown
+        ``document_id``), or ``DuplicateIdError`` (a chunk id that is already stored or repeats
+        within the batch). Stored chunks are never overwritten.
         """
         ...
 

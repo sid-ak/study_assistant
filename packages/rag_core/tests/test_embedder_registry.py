@@ -7,7 +7,11 @@ does, adding per-model columns and indexes, lives in the DB-only registry tests.
 
 import pytest
 
-from rag_core.store import EmbedderConflictError, EmbedderNotFoundError
+from rag_core.store import (
+    EmbedderConflictError,
+    EmbedderNotFoundError,
+    UnsupportedDimensionError,
+)
 from rag_core.store.embedders import (
     EmbedderRegistry,
     EmbedderRegistryProtocol,
@@ -51,6 +55,28 @@ def test_register_rejects_ids_that_collide(embedder_registry: EmbedderRegistryPr
     embedder_registry.register("bge-m3", 8)
     with pytest.raises(EmbedderConflictError):
         embedder_registry.register("BGE_M3", 8)
+
+
+@pytest.mark.parametrize("dimension", [0, 2001])
+def test_register_rejects_an_unsupported_dimension(
+    embedder_registry: EmbedderRegistryProtocol, dimension: int
+) -> None:
+    """A dimension outside 1 to 2000 is refused, and the model is left unregistered."""
+    with pytest.raises(UnsupportedDimensionError):
+        embedder_registry.register("too-wide", dimension)
+    with pytest.raises(EmbedderNotFoundError):
+        embedder_registry.set_current("too-wide")
+
+
+def test_register_accepts_the_largest_supported_dimension(
+    embedder_registry: EmbedderRegistryProtocol,
+) -> None:
+    """A 2000-dimension model, the largest supported, registers like any other."""
+    embedder_registry.register("widest", 2000)
+    embedder_registry.set_current("widest")
+    current = embedder_registry.get_current()
+    assert current is not None
+    assert current.dimension == 2000
 
 
 def test_set_current_rejects_unregistered_model(

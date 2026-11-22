@@ -67,8 +67,15 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   `resolve_database_url`), so URL resolution and `register_vector` live in one place.
 - Raise the typed errors in `store/errors.py`, never a driver exception, from a `StoreProtocol`
   method, and put any check both stores need in `store/validation.py` so they fail identically.
-  `InMemoryStore` must enforce every constraint the schema enforces (foreign key, dimension,
-  all-or-nothing batches), and the contract suite pins each failure path for both stores.
+  `InMemoryStore` and `InMemoryEmbedderRegistry` must enforce every constraint the schema
+  enforces, and the contract suites pin each failure path for both implementations:
+  - Unique document and chunk ids, raising `DuplicateIdError`. A batch that reuses a stored id
+    or repeats one is refused whole.
+  - The chunk foreign key to its document, raising `MissingDocumentError`.
+  - Embedding length matching the store's embedder, raising `EmbeddingDimensionError`.
+  - An embedder dimension of 1 to `MAX_EMBEDDING_DIMENSION` (2000, the HNSW index limit),
+    raising `UnsupportedDimensionError` before anything is registered.
+  - All-or-nothing batches.
 - Every write method takes an optional `user_id: UUID | None`, defaulting to
   `settings.default_user_id` (the ADR 0003 seam). New methods should follow the same signature
   rather than hardcoding the default user or dropping the parameter.

@@ -6,15 +6,18 @@ Each store is bound to one ``EmbedderInfo``. The registry of embedding models li
 
 from rag_core.store.client import Store
 from rag_core.store.errors import (
+    DuplicateIdError,
     EmbedderConflictError,
     EmbedderNotFoundError,
     EmbeddingDimensionError,
     MissingDocumentError,
     StoreError,
+    UnsupportedDimensionError,
 )
 from rag_core.store.protocol import StoreProtocol
 
 __all__ = [
+    "DuplicateIdError",
     "EmbedderConflictError",
     "EmbedderNotFoundError",
     "EmbeddingDimensionError",
@@ -22,4 +25,5 @@ __all__ = [
     "Store",
     "StoreError",
     "StoreProtocol",
+    "UnsupportedDimensionError",
 ]

@@ -26,9 +26,11 @@ class EmbedderRegistryProtocol(Protocol):
     def register(self, model_id: str, dimension: int) -> None:
         """Idempotently register an embedding model and give it its own vector storage.
 
-        Raises ``EmbedderConflictError`` if ``model_id`` is already registered with another
-        dimension, or if it cannot be told apart from an already registered id. Registering does
-        not make the model current.
+        ``dimension`` must be between 1 and ``MAX_EMBEDDING_DIMENSION`` (2000); outside that
+        range it raises ``UnsupportedDimensionError`` and registers nothing. Raises
+        ``EmbedderConflictError`` if ``model_id`` is already registered with another dimension,
+        or if it cannot be told apart from an already registered id. Registering does not make
+        the model current.
         """
         ...
 

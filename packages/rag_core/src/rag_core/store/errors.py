@@ -23,3 +23,11 @@ class EmbedderConflictError(StoreError):
 
 class EmbeddingDimensionError(StoreError):
     """An embedding's length differs from the dimension of the store's embedder."""
+
+
+class DuplicateIdError(StoreError):
+    """An id is already taken by another document or chunk, or repeats within one batch."""
+
+
+class UnsupportedDimensionError(StoreError):
+    """An embedder's dimension is outside the range the store can store and index."""

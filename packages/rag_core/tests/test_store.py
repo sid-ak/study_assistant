@@ -19,6 +19,7 @@ import pytest
 
 from rag_core.config import settings
 from rag_core.store import (
+    DuplicateIdError,
     EmbeddingDimensionError,
     MissingDocumentError,
     Store,
@@ -145,6 +146,58 @@ def test_add_chunks_rejects_wrong_dimension(store: StoreProtocol) -> None:
     with pytest.raises(EmbeddingDimensionError):
         store.add_chunks([make_chunk(doc_id, store.embedder.dimension + 1)])
     assert store.get_chunks_by_document(doc_id) == []
+
+
+def test_add_chunks_rejects_an_id_already_stored(store: StoreProtocol) -> None:
+    """A batch reusing a stored chunk's id is refused whole, and the stored chunk is unchanged."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    original = make_chunk(doc_id, store.embedder.dimension, content="original")
+    store.add_chunks([original])
+    reused = make_chunk(doc_id, store.embedder.dimension, id=original["id"], content="replaced")
+    fresh = make_chunk(doc_id, store.embedder.dimension)
+
+    with pytest.raises(DuplicateIdError):
+        store.add_chunks([fresh, reused])
+
+    stored = store.get_chunks_by_document(doc_id)
+    assert [chunk["id"] for chunk in stored] == [original["id"]]
+    assert stored[0]["content"] == "original"
+
+
+def test_add_chunks_rejects_an_id_repeated_in_one_batch(store: StoreProtocol) -> None:
+    """A batch that holds the same chunk id twice is refused whole."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    chunk = make_chunk(doc_id, store.embedder.dimension)
+    repeat = make_chunk(doc_id, store.embedder.dimension, id=chunk["id"])
+
+    with pytest.raises(DuplicateIdError):
+        store.add_chunks([chunk, repeat])
+
+    assert store.get_chunks_by_document(doc_id) == []
+
+
+def test_add_document_rejects_an_id_used_by_another_file(store: StoreProtocol) -> None:
+    """Reusing a document's id for a different file_hash is refused, leaving the document as is."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="a.md", file_hash="hash-a")
+
+    with pytest.raises(DuplicateIdError):
+        store.add_document(id=doc_id, filename="b.md", file_hash="hash-b")
+
+    stored = store.get_document_by_hash("hash-a")
+    assert stored is not None
+    assert stored["id"] == doc_id
+    assert stored["filename"] == "a.md"
+    assert store.get_document_by_hash("hash-b") is None
+
+
+def test_add_document_accepts_the_same_id_and_hash_again(store: StoreProtocol) -> None:
+    """Re-adding a document with its own id and file_hash is an idempotent re-ingest."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="a.md", file_hash="hash-a")
+    assert store.add_document(id=doc_id, filename="a2.md", file_hash="hash-a") == doc_id
 
 
 def test_store_reports_the_embedder_it_is_bound_to(store: StoreProtocol) -> None:

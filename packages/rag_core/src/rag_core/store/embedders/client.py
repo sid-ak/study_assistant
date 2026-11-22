@@ -7,6 +7,7 @@ from rag_core.store.connection import connect, resolve_database_url
 from rag_core.store.embedders.protocol import EmbedderInfo
 from rag_core.store.errors import EmbedderConflictError, EmbedderNotFoundError
 from rag_core.store.schema import embedding_column, embedding_index
+from rag_core.store.validation import check_embedder_dimension
 
 
 class EmbedderRegistry:
@@ -25,6 +26,7 @@ class EmbedderRegistry:
         Idempotent for the same ``(model_id, dimension)``. Raises ``EmbedderConflictError`` if the
         model is registered with another dimension, or another model already maps to its column.
         """
+        check_embedder_dimension(model_id, dimension)
         column = embedding_column(model_id)
         with connect(self.database_url) as conn:
             row = conn.execute(

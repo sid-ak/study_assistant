@@ -2,9 +2,10 @@
 
 A lightweight fake so tests that only need storage semantics — not real pgvector — run without a
 database. It mirrors the concrete ``Store``'s CRUD contract: hash-keyed idempotent document upsert,
-the chunk -> document foreign key with cascade on delete, per-model embeddings with one model per
-store instance, and the same ``user_id`` default. It does not model vector or full-text search;
-those are exercised by the DB-backed integration tests against ``Store``.
+unique document and chunk ids, the chunk -> document foreign key with cascade on delete, per-model
+embeddings with one model per store instance, and the same ``user_id`` default. It does not model
+vector or full-text search; those are exercised by the DB-backed integration tests against
+``Store``.
 """
 
 import copy
@@ -13,7 +14,7 @@ from uuid import UUID
 
 from rag_core.config import settings
 from rag_core.store.embedders import EmbedderInfo
-from rag_core.store.errors import MissingDocumentError
+from rag_core.store.errors import DuplicateIdError, MissingDocumentError
 from rag_core.store.validation import check_dimensions
 
 
@@ -52,6 +53,10 @@ class InMemoryStore:
                 doc["filename"] = filename
                 stored_id: UUID = doc["id"]
                 return stored_id
+        # Mirrors the documents primary key: no stored document has this file_hash, so an
+        # existing document with this id belongs to another file.
+        if id in self.documents:
+            raise DuplicateIdError(f"Document id {id} already belongs to another file.")
         self.documents[id] = {
             "id": id,
             "filename": filename,
@@ -95,6 +100,13 @@ class InMemoryStore:
                 raise MissingDocumentError(
                     f"Chunk {chunk['id']} references unknown document {chunk['document_id']}."
                 )
+        # Mirrors the chunks primary key, also before any write: an id already stored, or one
+        # that repeats within this batch, fails the whole batch instead of overwriting.
+        batch_ids: set[UUID] = set()
+        for chunk in chunks:
+            if chunk["id"] in self.chunks or chunk["id"] in batch_ids:
+                raise DuplicateIdError(f"Chunk id {chunk['id']} is already in use.")
+            batch_ids.add(chunk["id"])
         for chunk in chunks:
             self.chunks[chunk["id"]] = {
                 "id": chunk["id"],

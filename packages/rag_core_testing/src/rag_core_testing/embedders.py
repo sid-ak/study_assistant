@@ -3,6 +3,7 @@
 from rag_core.store.embedders.protocol import EmbedderInfo
 from rag_core.store.errors import EmbedderConflictError, EmbedderNotFoundError
 from rag_core.store.schema import embedding_column
+from rag_core.store.validation import check_embedder_dimension
 
 
 class InMemoryEmbedderRegistry:
@@ -18,7 +19,8 @@ class InMemoryEmbedderRegistry:
         self.current_model_id: str | None = None
 
     def register(self, model_id: str, dimension: int) -> None:
-        """Register a model, refusing a changed dimension or an id that collides with another."""
+        """Register a model, refusing an unsupported or changed dimension, or a colliding id."""
+        check_embedder_dimension(model_id, dimension)
         registered = self.embedders.get(model_id)
         if registered is not None:
             if registered.dimension != dimension:
