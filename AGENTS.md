@@ -68,8 +68,9 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
   (`uv run sphinx-build -b html docs site -W`, build-only — deployment lives in `docs-deploy.yaml`).
 - Pull requests are reviewed by Claude through `.github/workflows/claude-code-review.yml`. It runs on
   every non-draft push and posts one report per run, reviewing only the commits since its last
-  report. It needs the `CLAUDE_CODE_OAUTH_TOKEN` repository secret, and a change to the workflow
-  only takes effect once it is on `main`.
+  report. Each report lists every file it reviewed, and the check fails if a file in scope is
+  missing. Lockfiles are skipped. It needs the `CLAUDE_CODE_OAUTH_TOKEN` repository secret, and a
+  change to the workflow only takes effect once it is on `main`.
 - Run the whole suite with `uv run pytest`. Integration tests need the database — run
   `docker compose up -d` first or they fail to connect.
 - Integration tests are marked `@pytest.mark.integration`. Scope a run with
