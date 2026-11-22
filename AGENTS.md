@@ -66,9 +66,9 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
 - The CI plan is in `.github/workflows/ci.yaml`: a `checks` job (ruff lint, ruff format check, mypy,
   pytest against a pgvector service) and a `docs` job that builds the Sphinx site
   (`uv run sphinx-build -b html docs site -W`, build-only — deployment lives in `docs-deploy.yaml`).
-- Pull requests are reviewed by Claude through `.github/workflows/claude-code-review.yml`. It runs on
-  every non-draft push and posts one report per run, reviewing only the commits since its last
-  report. Each report lists every file it reviewed, and the check fails if a file in scope is
+- Pull requests are reviewed by Claude Opus 5.5 through `.github/workflows/claude-code-review.yml`.
+  It runs on every non-draft push and posts one report per run, reviewing only the commits since its
+  last report. Each report lists every file it reviewed, and the check fails if a file in scope is
   missing. Lockfiles are skipped. It needs the `CLAUDE_CODE_OAUTH_TOKEN` repository secret, and a
   change to the workflow only takes effect once it is on `main`.
 - Run the whole suite with `uv run pytest`. Integration tests need the database — run
