@@ -9,7 +9,6 @@
 :caption: Project
 
 architecture.md
-MVP.md
 ```
 
 ```{toctree}

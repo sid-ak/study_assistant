@@ -7,7 +7,8 @@
 
 The [architecture](../architecture.md) defines the corpus as course materials: lecture slides,
 papers, and notes, in pptx, pdf, and md, with citations back to the exact source slide or page.
-Ingesting that corpus needs a parser per format. The [MVP plan](../MVP.md) builds the first runnable
+Ingesting that corpus needs a parser per format. The MVP, phase 1.5 of the build plan
+([issue #45](https://github.com/sid-ak/study_assistant/issues/45)), builds the first runnable
 version of the system, and it builds only the markdown parser, because markdown is the one format
 that needs no extraction library and already carries its structure in headings.
 
@@ -28,7 +29,8 @@ Citations point to a markdown section: the source document plus the section head
 chunk's `metadata`. This replaces slide- and page-level citations for the duration of the MVP.
 
 The decision is temporary. The architecture's corpus definition is unchanged, and this record is
-superseded once the pptx and pdf parsers land and course materials are ingested.
+superseded once the pptx and pdf parsers land and course materials are ingested, tracked in
+[issue #53](https://github.com/sid-ak/study_assistant/issues/53).
 
 ## Consequences
 
