@@ -1,9 +1,9 @@
 # Study Assistant — Agent Context
 
 A local, single-user RAG study assistant over course materials (slides, papers, notes). It answers
-questions with synthesis from Claude, grounded in retrieved sources, with citations back to the
-exact source slide/page. Ingestion and retrieval run entirely on-machine; only generation calls the
-Anthropic API.
+questions with synthesis from a language model, grounded in retrieved sources, with citations back
+to the exact source slide/page. Ingestion and retrieval run entirely on-machine. Generation goes
+through any OpenAI-compatible endpoint, by default a local open-weight model.
 
 ## Getting Oriented
 
