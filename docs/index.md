@@ -9,7 +9,6 @@
 :caption: Project
 
 architecture.md
-MVP.md
 ```
 
 ```{toctree}
@@ -35,4 +34,5 @@ decisions/0005-documentation-tooling.md
 decisions/0006-interface-first-architecture.md
 decisions/0007-generation-backend.md
 decisions/0008-per-model-embedding-columns.md
+decisions/0009-mvp-corpus.md
 ```

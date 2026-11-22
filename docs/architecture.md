@@ -135,6 +135,7 @@ study_assistant/
 │       ├── Dockerfile
 │       └── src/api/
 │           ├── graph/           # LangGraph nodes, state, HITL checkpoints
+│           ├── generate/        # Generator protocol + OpenAI-compatible adapter
 │           ├── routes/          # /chat (SSE), /health, /resume
 │           ├── mcp_client/      # connects to mcp_server
 │           └── main.py
@@ -147,6 +148,13 @@ study_assistant/
 │       └── src/
 │           ├── components/      # chat, citation rendering, HITL approval
 │           └── api/             # SSE client
+├── evals/                       # golden-set eval harness — depends on rag_core
+│   ├── AGENTS.md                # canonical context — golden-set labels, metrics, results
+│   ├── pyproject.toml
+│   ├── golden/                  # labeled questions → expected document + section
+│   ├── results/                 # saved runs, compared across changes
+│   ├── src/evals/
+│   └── tests/
 └── infra/
     └── postgres/                # pgvector init.sql, model-weights volume notes
 ```
