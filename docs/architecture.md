@@ -43,7 +43,7 @@ testable across many implementations. See
 ### Ingestion
 
 Ingestion is driven by the `study` CLI: it points at a folder of course materials, parses slides,
-papers, and notes (pptx/pdf/md), semantically chunks them, embeds each chunk with `bge-m3`, and
+papers, and notes (pptx/pdf/md), semantically chunks them, embeds each chunk with `bge-small-en-v1.5`, and
 upserts into pgvector. It is idempotent and re-runnable, so the corpus grows as courses progress
 without reprocessing what's already stored.
 
@@ -51,7 +51,7 @@ without reprocessing what's already stored.
 
 Retrieval is the heart of the system and lives entirely in `rag_core`. A query runs hybrid search —
 dense vector similarity against pgvector plus BM25 lexical search — fused with RRF, then a
-`bge-reranker-v2-m3` cross-encoder re-scores the top candidates into the final top-k. The reranker
+`jina-reranker-v1-tiny-en` cross-encoder re-scores the top candidates into the final top-k. The reranker
 is the single highest-leverage quality lever, reading query and document together to catch relevance
 that bi-encoder embeddings miss. Retrieval quality is validated by an eval loop: a golden-set
 harness (labeled query → expected document) introduced in the embeddings phase, which both guards
@@ -64,7 +64,10 @@ Generation runs in the FastAPI backend, where a LangGraph state machine orchestr
 grounded answer. Responses stream to the React frontend over SSE, with citations resolving back to
 the exact source slide or page.
 
-See [ADR 0007](decisions/0007-generation-backend.md) for the backend and candidate models.
+See [ADR 0007](decisions/0007-generation-backend.md) for the backend and candidate models, and
+[ADR 0011](decisions/0011-free-hosted-generation.md) for the free hosted endpoint the MVP uses by
+default. The embedding and reranking models, and why they run on `fastembed`, are in
+[ADR 0010](decisions/0010-lightweight-embedding-and-reranking-models.md).
 
 ## Governance and Conventions
 
@@ -107,8 +110,8 @@ study_assistant/
 │       ├── pyproject.toml
 │       ├── src/rag_core/
 │       │   ├── ingest/          # pptx/pdf/md parsing, semantic chunking
-│       │   ├── embed/           # bge embedder (lazy torch load)
-│       │   ├── rerank/          # bge cross-encoder reranker
+│       │   ├── embed/           # fastembed embedder (lazy model load)
+│       │   ├── rerank/          # fastembed cross-encoder reranker
 │       │   ├── retrieve/        # dense + BM25 + RRF fusion
 │       │   ├── store/           # pgvector access, schema, migrations
 │       │   └── config.py

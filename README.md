@@ -3,8 +3,8 @@
 A local, single-user RAG study assistant over course materials (lecture slides, papers, notes). It
 answers questions with synthesis from a language model, grounded in retrieved sources, with
 citations back to the exact source slide or page. Ingestion and retrieval run entirely on-machine,
-offline, and for free. Generation goes through any OpenAI-compatible endpoint, by default a local
-open-weight model, so the whole pipeline can run offline.
+offline, and for free. Generation goes through any OpenAI-compatible endpoint: the MVP uses a free
+hosted model, and a local runtime works through the same adapter.
 
 - Design: [`docs/architecture.md`](docs/architecture.md)
 - Decisions: [`docs/decisions/`](docs/decisions/) (ADRs)
@@ -13,7 +13,9 @@ open-weight model, so the whole pipeline can run offline.
 ## Status
 
 Phase 1 — Storage + Schema is complete. Next is Phase 1.5 — MVP (issue #45), a thin end-to-end
-slice from ingestion to a cited answer. The repo contains the `uv` workspace root, the
+slice from ingestion to a cited answer. Its models are settled: `fastembed` runs the embedder and
+reranker locally (ADR 0010), and generation uses Groq's free plan (ADR 0011). The repo contains the
+`uv` workspace root, the
 shared `packages/rag_core/` library with the pgvector storage layer behind a `StoreProtocol`
 interface (with in-memory fakes in the dev-only `packages/rag_core_testing/` for DB-free unit
 tests), and the Postgres + pgvector dev stack.
