@@ -76,3 +76,6 @@ site/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Model downloads from scripts/probes/probe_fastembed.py
+scripts/probes/model_cache/
