@@ -1,6 +1,7 @@
 # 7. Generation Backend
 
-- Status: Accepted
+- Status: Accepted, partly superseded by [ADR 0011](0011-free-hosted-generation.md) (the default
+  endpoint)
 - Date: 2026-07-02
 
 ## Context

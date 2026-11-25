@@ -11,12 +11,12 @@ phased build plan is tracked as
 | --------------------------------------------- | ----------------------------------------------------------- | -------- |
 | [0000](0000-stack.md)                         | Stack: Python, FastAPI, PostgreSQL, React                   | Accepted |
 | [0001](0001-rag-retrieval-boundary.md)        | RAG retrieval boundary: a shared `rag_core` library         | Accepted |
-| [0002](0002-local-embedding-and-reranking.md) | Embedding and reranking stack: local open-source models     | Accepted |
+| [0002](0002-local-embedding-and-reranking.md) | Embedding and reranking stack: local open-source models     | Accepted, models partly superseded by [0010](0010-lightweight-embedding-and-reranking-models.md) |
 | [0003](0003-local-single-user-scope.md)       | Deployment scope: local single-user                         | Accepted |
 | [0004](0004-cli-batch-ingestion.md)           | Document ingestion: CLI batch                               | Accepted |
 | [0005](0005-documentation-tooling.md)         | Documentation site tooling: Sphinx, MyST, and Furo          | Accepted |
 | [0006](0006-interface-first-architecture.md)  | Interface-first architecture: `Protocol`s + implementations | Accepted |
-| [0007](0007-generation-backend.md)            | Generation backend: vendor-neutral, OpenAI-compatible       | Accepted |
+| [0007](0007-generation-backend.md)            | Generation backend: vendor-neutral, OpenAI-compatible       | Accepted, default endpoint partly superseded by [0011](0011-free-hosted-generation.md) |
 | [0008](0008-per-model-embedding-columns.md)   | Per-model embedding columns (additive embedder swaps)       | Accepted |
 | [0009](0009-mvp-corpus.md)                    | MVP corpus: release-engineering markdown                    | Accepted |
 | [0010](0010-lightweight-embedding-and-reranking-models.md) | Lightweight embedding and reranking models on fastembed | Accepted |

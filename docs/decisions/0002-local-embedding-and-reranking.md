@@ -1,6 +1,7 @@
 # 2. Embedding and Reranking
 
-- Status: Accepted
+- Status: Accepted, partly superseded by
+  [ADR 0010](0010-lightweight-embedding-and-reranking-models.md) (the embedding and reranking models)
 - Date: 2026-06-13
 
 ## Context
