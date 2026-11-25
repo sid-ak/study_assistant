@@ -40,8 +40,12 @@ EXPECTED_BEST = 1  # index of the AddressSanitizer document
 
 
 def peak_memory_mb() -> float:
-    """Return this process's peak resident memory in MB (macOS reports bytes)."""
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024)
+    """Return this process's peak resident memory in MB on macOS or Linux."""
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # ru_maxrss is in bytes on macOS but in kibibytes on Linux.
+    if sys.platform == "darwin":
+        return peak / (1024 * 1024)
+    return peak / 1024
 
 
 def folder_size_mb(folder: Path) -> float:
