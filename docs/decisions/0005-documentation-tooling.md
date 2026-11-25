@@ -13,7 +13,7 @@ prone to drifting from the code. Both halves — narrative and generated referen
 static site, deployed by a GitHub Actions workflow like the rest of the project's automation.
 
 An initial pass adopted MkDocs + `mkdocstrings` + Material for MkDocs and got as far as a working
-`mkdocs.yaml`, a generated API reference page, and a deploy workflow. That work surfaced a
+`mkdocs.yml`, a generated API reference page, and a deploy workflow. That work surfaced a
 governance problem rather than a technical one: MkDocs 2.0 (announced by a maintainer who took over
 the project mid-2024) removes the plugin system entirely, has no migration path for existing
 projects, and is currently unlicensed. Since `mkdocstrings` — the entire reason to use this stack —
