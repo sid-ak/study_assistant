@@ -3,8 +3,8 @@
 A local, single-user RAG study assistant over course materials (lecture slides, papers, notes). It
 answers questions with synthesis from a language model, grounded in retrieved sources, with
 citations back to the exact source slide or page. Ingestion and retrieval run entirely on-machine,
-offline, and for free. Generation goes through any OpenAI-compatible endpoint, by default a local
-open-weight model, so the whole pipeline can run offline.
+offline, and for free. Generation goes through any OpenAI-compatible endpoint: the MVP uses a free
+hosted model, and a local runtime works through the same adapter.
 
 - Design: [`docs/architecture.md`](docs/architecture.md)
 - Decisions: [`docs/decisions/`](docs/decisions/) (ADRs)

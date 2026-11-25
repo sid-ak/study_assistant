@@ -19,3 +19,5 @@ phased build plan is tracked as
 | [0007](0007-generation-backend.md)            | Generation backend: vendor-neutral, OpenAI-compatible       | Accepted |
 | [0008](0008-per-model-embedding-columns.md)   | Per-model embedding columns (additive embedder swaps)       | Accepted |
 | [0009](0009-mvp-corpus.md)                    | MVP corpus: release-engineering markdown                    | Accepted |
+| [0010](0010-lightweight-embedding-and-reranking-models.md) | Lightweight embedding and reranking models on fastembed | Accepted |
+| [0011](0011-free-hosted-generation.md)        | Free hosted generation endpoint (Groq) for the MVP          | Accepted |
