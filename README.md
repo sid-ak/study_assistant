@@ -12,7 +12,8 @@ open-weight model, so the whole pipeline can run offline.
 
 ## Status
 
-Early scaffolding (Phase 1 — Storage + Schema). The repo contains the `uv` workspace root, the
+Phase 1 — Storage + Schema is complete. Next is Phase 1.5 — MVP (issue #45), a thin end-to-end
+slice from ingestion to a cited answer. The repo contains the `uv` workspace root, the
 shared `packages/rag_core/` library with the pgvector storage layer behind a `StoreProtocol`
 interface (with in-memory fakes in the dev-only `packages/rag_core_testing/` for DB-free unit
 tests), and the Postgres + pgvector dev stack.
