@@ -19,7 +19,7 @@ def test_ingest_loads_the_folder_and_reports_counts(
     assert exit_code == 0
     assert "added build.md" in output
     assert "added ci.md" in output
-    assert "2 added, 0 replaced, 0 unchanged, 0 empty; 2 chunks written" in output
+    assert "2 added, 0 replaced, 0 unchanged, 0 empty, 0 unreadable; 2 chunks written" in output
 
 
 def test_ingest_marks_the_model_current_on_the_first_run(
@@ -44,7 +44,7 @@ def test_ingest_twice_writes_nothing_the_second_time(
     exit_code = main(["ingest", str(corpus)])
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert "0 added, 0 replaced, 2 unchanged, 0 empty; 0 chunks written" in output
+    assert "0 added, 0 replaced, 2 unchanged, 0 empty, 0 unreadable; 0 chunks written" in output
 
 
 def test_ingest_a_missing_folder_fails_with_a_message(
@@ -68,3 +68,17 @@ def test_the_study_console_script_runs_main() -> None:
     """Installing the package provides a ``study`` command that calls ``main``."""
     scripts = entry_points(group="console_scripts", name="study")
     assert [script.value for script in scripts] == ["study_cli.main:main"]
+
+
+def test_ingest_lists_unreadable_files_on_stderr(
+    corpus: Path, components: cli_main.Components, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A file that is not UTF-8 is named on stderr, counted, and does not stop the run."""
+    (corpus / "latin1.md").write_bytes("# Café\n".encode("latin-1"))
+    exit_code = main(["ingest", str(corpus)])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "unreadable latin1.md: not valid UTF-8" in captured.err
+    assert (
+        "2 added, 0 replaced, 0 unchanged, 0 empty, 1 unreadable; 2 chunks written" in captured.out
+    )

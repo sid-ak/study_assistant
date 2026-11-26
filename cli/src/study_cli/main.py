@@ -89,10 +89,12 @@ def run_ingest(folder: Path, components: Components) -> int:
         print(f"replaced {source}")
     for source in report.empty:
         print(f"empty {source}")
+    for source in report.unreadable:
+        print(f"unreadable {source}: not valid UTF-8", file=sys.stderr)
     print(
         f"{len(report.added)} added, {len(report.replaced)} replaced, "
-        f"{len(report.unchanged)} unchanged, {len(report.empty)} empty; "
-        f"{report.chunks_written} chunks written"
+        f"{len(report.unchanged)} unchanged, {len(report.empty)} empty, "
+        f"{len(report.unreadable)} unreadable; {report.chunks_written} chunks written"
     )
     return 0
 

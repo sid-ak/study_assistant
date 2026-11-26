@@ -21,6 +21,6 @@ def test_the_whole_corpus_is_committed_and_ingests(
     exit_code = main(["ingest", str(CORPUS)])
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert "17 added, 0 replaced, 0 unchanged, 0 empty" in output
+    assert "17 added, 0 replaced, 0 unchanged, 0 empty, 0 unreadable" in output
     for folder, count in (("build_systems/", 6), ("ci/", 7), ("releases/", 4)):
         assert output.count(f"added {folder}") == count

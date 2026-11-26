@@ -152,3 +152,14 @@ def test_a_document_left_without_chunks_gets_them(
     assert report.replaced == ["build.md"]
     assert report.added == ["ci/pthread.md"]
     assert stored_sources(hashing_store) == ["build.md", "ci/pthread.md"]
+
+
+def test_a_file_that_is_not_utf8_is_reported_and_skipped(
+    corpus: Path, hashing_store: StoreProtocol
+) -> None:
+    """A file that cannot be decoded as UTF-8 is listed as unreadable; the others still ingest."""
+    (corpus / "a-latin1.md").write_bytes("# Café\n\nbr\xfbl\xe9\n".encode("latin-1"))
+    report = ingest(corpus, hashing_store)
+    assert report.unreadable == ["a-latin1.md"]
+    assert report.added == ["build.md", "ci/pthread.md"]
+    assert stored_sources(hashing_store) == ["build.md", "ci/pthread.md"]

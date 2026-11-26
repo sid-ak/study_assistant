@@ -12,8 +12,15 @@ A file is chunked and embedded before anything is written for it, so a failure i
 leaves the store untouched. If a run stops between storing a document and its chunks, the next run
 sees a document with no chunks and writes them.
 
-Files removed from the folder, and files moved to a new path with the same content, are not
-reconciled: the stored document keeps its old path until its content changes.
+A file that is not valid UTF-8 is reported as unreadable and skipped, and the run continues.
+
+Some cases are not reconciled:
+
+- A file removed from the folder keeps its stored document.
+- A file moved to a new path with the same content keeps its old path until its content changes.
+- Two files with identical bytes share one stored document, because content is identified by its
+  hash. The second is reported as unchanged. If the first is later edited, the shared content is
+  stored again under the second path when the run reaches it, which may be the next run.
 """
 
 import hashlib
@@ -40,6 +47,7 @@ class IngestReport:
     replaced: list[str] = field(default_factory=list)
     unchanged: list[str] = field(default_factory=list)
     empty: list[str] = field(default_factory=list)
+    unreadable: list[str] = field(default_factory=list)
     chunks_written: int = 0
 
 
@@ -82,7 +90,13 @@ def ingest_folder(
             report.unchanged.append(source)
             continue
 
-        chunks = chunker.chunk(data.decode("utf-8"), source=source)
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            # One file in another encoding must not stop the rest of the folder.
+            report.unreadable.append(source)
+            continue
+        chunks = chunker.chunk(text, source=source)
         if not chunks:
             report.empty.append(source)
             continue
