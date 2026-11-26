@@ -8,7 +8,6 @@ app's `rag_core.config.Settings`), and add more test config / fixtures here as t
 from collections.abc import Iterator
 
 import pytest
-from psycopg import sql
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_core.store import Store, StoreProtocol
@@ -37,7 +36,7 @@ def integration_config() -> IntegrationConfig:
 
 @pytest.fixture
 def database_url(integration_config: IntegrationConfig) -> Iterator[str]:
-    """``TEST_DATABASE_URL`` with the schema initialized; tables and embedding columns reset after.
+    """``TEST_DATABASE_URL`` with the schema initialized; the tables are dropped after the test.
 
     The DB-backed fixtures below all build on this one, so a test that uses several of them shares
     one database and one teardown.
@@ -53,17 +52,10 @@ def database_url(integration_config: IntegrationConfig) -> Iterator[str]:
     Store(database_url=url, embedder=EMBEDDER_A).initialize()
     yield url
     with connect(url) as conn:
-        # Per-model columns outlive a TRUNCATE, so drop them first: a later test may register the
-        # same model id with a different dimension.
-        rows = conn.execute("SELECT column_name FROM embedding_models").fetchall()
-        for row in rows:
-            conn.execute(
-                sql.SQL("ALTER TABLE chunks DROP COLUMN IF EXISTS {}").format(
-                    sql.Identifier(row["column_name"])
-                )
-            )
-        # Clears them together without needing CASCADE for the chunks -> documents foreign key.
-        conn.execute("TRUNCATE documents, chunks, embedding_models")
+        # Drop the tables rather than each test's per-model columns: Postgres keeps a dropped
+        # column's slot, and a table allows only 1600 over its lifetime. The next test's
+        # initialize() recreates them, so a model id can come back with another dimension.
+        conn.execute("DROP TABLE IF EXISTS chunks, documents, embedding_models")
 
 
 @pytest.fixture
