@@ -4,7 +4,7 @@
 recorded in [ADR 0009](../docs/decisions/0009-mvp-corpus.md). It describes Orbit, a fictional C++
 service, through three kinds of markdown document:
 
-- `build/`: build-system guides for CMake and Bazel.
+- `build_systems/`: build-system guides for CMake and Bazel.
 - `releases/`: release notes for Orbit's versions.
 - `ci/`: CI failure write-ups, each with the failing log excerpt, its cause, its fix, and how to
   prevent it.
