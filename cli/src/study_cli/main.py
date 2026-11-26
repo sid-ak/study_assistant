@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from rag_core.config import Settings
-from rag_core.embed import EmbedderProtocol, FastembedEmbedder, register_embedder
+from rag_core.embed import (
+    EmbedderProtocol,
+    FastembedEmbedder,
+    embed_missing,
+    register_embedder,
+)
 from rag_core.ingest import ingest_folder
 from rag_core.retrieve import retrieve
 from rag_core.store import EmbedderNotFoundError, Store, StoreProtocol
@@ -55,6 +60,10 @@ def build_parser() -> argparse.ArgumentParser:
     ingest = commands.add_parser("ingest", help="Load every markdown file under a folder.")
     ingest.add_argument("folder", type=Path, help="Folder to ingest, searched recursively.")
 
+    commands.add_parser(
+        "embed", help="Embed stored chunks that the configured model has no vector for."
+    )
+
     query = commands.add_parser("query", help="Show the chunks nearest to a question.")
     query.add_argument("text", help="The question or search text.")
     query.add_argument("--limit", type=int, default=5, help="How many chunks to show (default 5).")
@@ -67,16 +76,35 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def prepare_model(components: Components) -> None:
+    """Prepare the database schema and register the configured model.
+
+    The model becomes current only if no model is current yet, and this prints when it does.
+    """
+    components.store.initialize()
+    if register_embedder(components.registry, components.embedder.info):
+        print(f"{components.embedder.info.model_id} is now the current embedding model.")
+
+
+def run_embed(components: Components) -> int:
+    """Embed every stored chunk the configured model has no vector for, and return the status.
+
+    Registers the model first, so a second model can be embedded beside the current one without
+    changing which model is current.
+    """
+    prepare_model(components)
+    embedded = embed_missing(components.store, components.embedder)
+    print(f"{embedded} chunks embedded with {components.embedder.info.model_id}")
+    return 0
+
+
 def run_ingest(folder: Path, components: Components) -> int:
     """Ingest ``folder``, print what changed, and return the exit status.
 
     Prepares the database schema, registers the configured model, and makes it current if no
     model is current yet, so the first ingest needs no separate setup step.
     """
-    components.store.initialize()
-    model_id = components.embedder.info.model_id
-    if register_embedder(components.registry, components.embedder.info):
-        print(f"{model_id} is now the current embedding model.")
+    prepare_model(components)
     try:
         report = ingest_folder(folder, store=components.store, embedder=components.embedder)
     except NotADirectoryError as error:
@@ -168,6 +196,8 @@ def main(argv: list[str] | None = None) -> int:
     components = build_components(Settings())
     if args.command == "ingest":
         return run_ingest(args.folder, components)
+    if args.command == "embed":
+        return run_embed(components)
     if args.command == "query":
         return run_query(args.text, args.limit, args.ef_search, components)
     # argparse only accepts the commands registered above, so this line is never reached.

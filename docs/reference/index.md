@@ -57,6 +57,14 @@
    :show-inheritance:
 ```
 
+## rag_core.embed.backfill
+
+```{eval-rst}
+.. automodule:: rag_core.embed.backfill
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.embed.binding
 
 ```{eval-rst}

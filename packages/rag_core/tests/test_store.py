@@ -21,6 +21,7 @@ from rag_core.config import settings
 from rag_core.store import (
     DuplicateIdError,
     EmbeddingDimensionError,
+    MissingChunkError,
     MissingDocumentError,
     Store,
     StoreProtocol,
@@ -488,6 +489,127 @@ def test_add_chunks_rejects_a_zero_embedding(store: StoreProtocol) -> None:
     with pytest.raises(ZeroEmbeddingError):
         store.add_chunks([good, zero])
     assert store.get_chunks_by_document(doc_id) == []
+
+
+def store_contents(store: StoreProtocol, contents: list[str]) -> list[uuid.UUID]:
+    """Store one document with a chunk per text, embedded by ``store``'s model; return the ids."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash=str(doc_id))
+    chunks = []
+    for content in contents:
+        chunks.append(make_chunk(doc_id, store.embedder.dimension, content=content))
+    store.add_chunks(chunks)
+    return [chunk["id"] for chunk in chunks]
+
+
+def unembedded_pairs(store: StoreProtocol, limit: int = 100) -> list[tuple[uuid.UUID, str]]:
+    """The ``(id, content)`` of each chunk ``store``'s model has not embedded, in listed order."""
+    pairs = []
+    for row in store.get_unembedded_chunks(limit=limit):
+        pairs.append((row["id"], row["content"]))
+    return pairs
+
+
+@pytest.fixture
+def store_b(store: StoreProtocol, embedder_registry: EmbedderRegistryProtocol) -> StoreProtocol:
+    """A store over the same data as ``store``, bound to a second registered model."""
+    embedder_registry.register(EMBEDDER_B.model_id, EMBEDDER_B.dimension)
+    return store.with_embedder(EMBEDDER_B)
+
+
+def test_get_unembedded_chunks_lists_what_the_model_has_not_embedded(
+    store: StoreProtocol, store_b: StoreProtocol
+) -> None:
+    """Chunks another model embedded are listed for this one, as id and content, in added order."""
+    ids = store_contents(store, ["first", "second", "third"])
+
+    assert unembedded_pairs(store_b) == [(ids[0], "first"), (ids[1], "second"), (ids[2], "third")]
+    assert unembedded_pairs(store) == []
+
+
+def test_get_unembedded_chunks_returns_at_most_limit(
+    store: StoreProtocol, store_b: StoreProtocol
+) -> None:
+    """``limit`` caps the list, taking the earliest-added chunks first."""
+    ids = store_contents(store, ["first", "second", "third"])
+
+    assert unembedded_pairs(store_b, limit=2) == [(ids[0], "first"), (ids[1], "second")]
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_get_unembedded_chunks_rejects_a_limit_below_one(store: StoreProtocol, limit: int) -> None:
+    """A limit below one is an error, not an empty list."""
+    with pytest.raises(ValueError):
+        store.get_unembedded_chunks(limit=limit)
+
+
+def test_set_embeddings_fills_only_the_bound_models_column(
+    store: StoreProtocol, store_b: StoreProtocol
+) -> None:
+    """Vectors set through one model's store go to that model; the other model's are unchanged."""
+    ids = store_contents(store, ["first", "second"])
+    before_a = store.search_dense(unit_vector([1.0], EMBEDDER_A.dimension), limit=2)
+    vectors = [
+        unit_vector([1.0, 0.0], EMBEDDER_B.dimension),
+        unit_vector([0.0, 1.0], EMBEDDER_B.dimension),
+    ]
+
+    store_b.set_embeddings(
+        [{"id": ids[0], "embedding": vectors[0]}, {"id": ids[1], "embedding": vectors[1]}]
+    )
+
+    assert unembedded_pairs(store_b) == []
+    nearest = store_b.search_dense(unit_vector([0.0, 1.0], EMBEDDER_B.dimension), limit=1)
+    assert nearest[0]["id"] == ids[1]
+    assert nearest[0]["distance"] == pytest.approx(0.0, abs=1e-6)
+    after_a = store.search_dense(unit_vector([1.0], EMBEDDER_A.dimension), limit=2)
+    assert after_a == before_a
+
+
+def test_set_embeddings_replaces_a_vector_already_stored(store: StoreProtocol) -> None:
+    """Setting a chunk's vector again overwrites the old one for that model."""
+    [chunk_id] = store_contents(store, ["only"])
+    replacement = unit_vector([0.0, 0.0, 1.0], EMBEDDER_A.dimension)
+
+    store.set_embeddings([{"id": chunk_id, "embedding": replacement}])
+
+    nearest = store.search_dense(replacement, limit=1)
+    assert nearest[0]["id"] == chunk_id
+    assert nearest[0]["distance"] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_set_embeddings_with_nothing_to_set_does_nothing(store_b: StoreProtocol) -> None:
+    """An empty batch is accepted and changes nothing."""
+    store_b.set_embeddings([])
+    assert unembedded_pairs(store_b) == []
+
+
+@pytest.mark.parametrize(
+    ("bad_row", "error"),
+    [
+        ("unknown id", MissingChunkError),
+        ("wrong dimension", EmbeddingDimensionError),
+        ("zero vector", ZeroEmbeddingError),
+        ("repeated id", DuplicateIdError),
+    ],
+)
+def test_set_embeddings_is_all_or_nothing(
+    store: StoreProtocol, store_b: StoreProtocol, bad_row: str, error: type[Exception]
+) -> None:
+    """One bad row fails the whole batch, and no vector in it is written."""
+    ids = store_contents(store, ["first", "second"])
+    good = {"id": ids[0], "embedding": unit_vector([1.0], EMBEDDER_B.dimension)}
+    bad_rows = {
+        "unknown id": {"id": uuid.uuid4(), "embedding": unit_vector([1.0], EMBEDDER_B.dimension)},
+        "wrong dimension": {"id": ids[1], "embedding": unit_vector([1.0], EMBEDDER_A.dimension)},
+        "zero vector": {"id": ids[1], "embedding": [0.0] * EMBEDDER_B.dimension},
+        "repeated id": {"id": ids[0], "embedding": unit_vector([0.0, 1.0], EMBEDDER_B.dimension)},
+    }
+
+    with pytest.raises(error):
+        store_b.set_embeddings([good, bad_rows[bad_row]])
+
+    assert unembedded_pairs(store_b) == [(ids[0], "first"), (ids[1], "second")]
 
 
 def test_both_implementations_conform_to_protocol() -> None:

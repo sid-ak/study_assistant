@@ -33,9 +33,9 @@ questions are labeled by document and section heading rather than by chunk, so l
 re-chunking. `study-eval <name>` scores them against the ingested corpus, reporting Recall@5, MRR,
 and p50 and p95 latency, and saves the run in `evals/results/`. The dense baseline with
 `bge-small-en-v1.5` scores Recall@5 0.90 and MRR 0.88. An exact error code ranks third, and two
-questions whose answer spans two documents find only one of their sections. Re-embedding existing chunks into a newly
-registered model's column is still to come (issue #15). Later phases add the MCP server, the
-FastAPI backend, and the React frontend.
+questions whose answer spans two documents find only one of their sections. `study embed` fills a
+newly registered model's column for the chunks already stored, so a second model can be measured
+beside the first. Later phases add the MCP server, the FastAPI backend, and the React frontend.
 
 ## Prerequisites
 

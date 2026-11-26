@@ -94,6 +94,26 @@ class StoreProtocol(Protocol):
         """
         ...
 
+    def get_unembedded_chunks(self, limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks this store's ``embedder`` has not embedded yet.
+
+        Each is ``{id, content}``, in the order the chunks were added. These are the chunks a
+        newly registered model needs vectors for. Raises ``ValueError`` if ``limit`` is below one
+        and ``EmbedderNotFoundError`` if the embedder is not registered.
+        """
+        ...
+
+    def set_embeddings(self, embeddings: list[dict[str, Any]]) -> None:
+        """Store each ``{id, embedding}`` as this store's ``embedder``'s vector for that chunk.
+
+        A vector the embedder already stored for the chunk is replaced. Other models' vectors and
+        the chunk's other fields are unchanged. The batch is all-or-nothing and raises
+        ``EmbedderNotFoundError`` (the embedder is not registered), ``EmbeddingDimensionError``
+        (wrong length), ``ZeroEmbeddingError`` (all zeros), ``MissingChunkError`` (an id with no
+        stored chunk), or ``DuplicateIdError`` (an id repeated within the batch).
+        """
+        ...
+
     def search_dense(
         self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None
     ) -> list[dict[str, Any]]:
