@@ -1,0 +1,415 @@
+{
+  "name": "dense-bge-base",
+  "created_at": "2026-11-26T17:22:35+00:00",
+  "model_id": "BAAI/bge-base-en-v1.5",
+  "dimension": 768,
+  "k": 5,
+  "ef_search": null,
+  "repeats": 5,
+  "recall_at_k": 0.9,
+  "mrr": 0.85,
+  "latency_p50_ms": 42.07337484695017,
+  "latency_p95_ms": 56.08370900154114,
+  "questions": [
+    {
+      "id": "bazel-asan",
+      "text": "How do I run every test under AddressSanitizer with Bazel?",
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "retrieved": [
+        {
+          "document": "build_systems/bazel-basics.md",
+          "section": "Bazel basics > Configs in .bazelrc",
+          "distance": 0.3423804044723464
+        },
+        {
+          "document": "build_systems/sanitizers.md",
+          "section": "Sanitizers > AddressSanitizer",
+          "distance": 0.3533960791466272
+        },
+        {
+          "document": "build_systems/sanitizers.md",
+          "section": "Sanitizers",
+          "distance": 0.4014324010699152
+        },
+        {
+          "document": "ci/bazel-remote-cache-unavailable.md",
+          "section": "CI failure: Bazel remote cache UNAVAILABLE > Cause",
+          "distance": 0.4195512629090069
+        },
+        {
+          "document": "build_systems/bazel-basics.md",
+          "section": "Bazel basics",
+          "distance": 0.42099037295522423
+        }
+      ],
+      "latencies_ms": [
+        46.2955420371145,
+        54.07391604967415,
+        51.019624806940556,
+        51.221834030002356,
+        46.845708042383194
+      ]
+    },
+    {
+      "id": "error-e1050",
+      "text": "What does error E1050 mean?",
+      "recall": 1.0,
+      "reciprocal_rank": 0.5,
+      "retrieved": [
+        {
+          "document": "releases/orbit-5.0.md",
+          "section": "Orbit 5.0 release notes > Fixed issues",
+          "distance": 0.3963784451935779
+        },
+        {
+          "document": "releases/orbit-5.0.md",
+          "section": "Orbit 5.0 release notes > New features",
+          "distance": 0.41376106903088494
+        },
+        {
+          "document": "releases/orbit-4.1.md",
+          "section": "Orbit 4.1 release notes > Fixed issues",
+          "distance": 0.42945962303395135
+        },
+        {
+          "document": "releases/orbit-4.0.md",
+          "section": "Orbit 4.0 release notes > Fixed issues",
+          "distance": 0.4530663220246829
+        },
+        {
+          "document": "build_systems/bazel-remote-cache.md",
+          "section": "Bazel remote cache > Diagnosing cache misses",
+          "distance": 0.47095683390159315
+        }
+      ],
+      "latencies_ms": [
+        35.86212499067187,
+        38.7860001064837,
+        35.01154109835625,
+        33.19829097017646,
+        31.36999998241663
+      ]
+    },
+    {
+      "id": "pthread-oldest-linux",
+      "text": "Why does linking fail with undefined reference to pthread_create only on the oldest Linux image?",
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "retrieved": [
+        {
+          "document": "ci/undefined-reference-pthread-create.md",
+          "section": "CI failure: undefined reference to pthread_create > Cause",
+          "distance": 0.1686814775669716
+        },
+        {
+          "document": "ci/undefined-reference-pthread-create.md",
+          "section": "CI failure: undefined reference to pthread_create",
+          "distance": 0.175534423520321
+        },
+        {
+          "document": "ci/undefined-reference-pthread-create.md",
+          "section": "CI failure: undefined reference to pthread_create > Prevention",
+          "distance": 0.1809852094926161
+        },
+        {
+          "document": "ci/undefined-reference-pthread-create.md",
+          "section": "CI failure: undefined reference to pthread_create > Fix",
+          "distance": 0.22173008983520126
+        },
+        {
+          "document": "ci/undefined-reference-pthread-create.md",
+          "section": "CI failure: undefined reference to pthread_create > Symptom",
+          "distance": 0.23400135749606488
+        }
+      ],
+      "latencies_ms": [
+        40.128166088834405,
+        56.08370900154114,
+        57.77279194444418,
+        54.9622499383986,
+        52.89312498643994
+      ]
+    },
+    {
+      "id": "linker-out-of-memory",
+      "text": "Linking test binaries runs out of memory on CI. How can the number of simultaneous links be limited?",
+      "recall": 1.0,
+      "reciprocal_rank": 0.5,
+      "retrieved": [
+        {
+          "document": "ci/linker-killed-exit-code-137.md",
+          "section": "CI failure: linker killed with exit code 137",
+          "distance": 0.2606213818869386
+        },
+        {
+          "document": "ci/linker-killed-exit-code-137.md",
+          "section": "CI failure: linker killed with exit code 137 > Fix",
+          "distance": 0.2857998268842853
+        },
+        {
+          "document": "ci/linker-killed-exit-code-137.md",
+          "section": "CI failure: linker killed with exit code 137 > Cause",
+          "distance": 0.3145442230052633
+        },
+        {
+          "document": "ci/linker-killed-exit-code-137.md",
+          "section": "CI failure: linker killed with exit code 137 > Prevention",
+          "distance": 0.3204079270362854
+        },
+        {
+          "document": "ci/no-space-left-on-device.md",
+          "section": "CI failure: No space left on device during the image build > Symptom",
+          "distance": 0.33140448740693884
+        }
+      ],
+      "latencies_ms": [
+        52.7149171102792,
+        43.65262482315302,
+        43.9300830475986,
+        52.59020812809467,
+        48.719084123149514
+      ]
+    },
+    {
+      "id": "openssl-homebrew",
+      "text": "CMake cannot find the OpenSSL that Homebrew installed on a Mac. What should the configure step pass?",
+      "recall": 1.0,
+      "reciprocal_rank": 0.5,
+      "retrieved": [
+        {
+          "document": "ci/openssl-not-found-macos.md",
+          "section": "CI failure: Could NOT find OpenSSL on macOS > Cause",
+          "distance": 0.14355753140955185
+        },
+        {
+          "document": "ci/openssl-not-found-macos.md",
+          "section": "CI failure: Could NOT find OpenSSL on macOS > Fix",
+          "distance": 0.155308924839753
+        },
+        {
+          "document": "ci/openssl-not-found-macos.md",
+          "section": "CI failure: Could NOT find OpenSSL on macOS > Symptom",
+          "distance": 0.15705271791154907
+        },
+        {
+          "document": "ci/openssl-not-found-macos.md",
+          "section": "CI failure: Could NOT find OpenSSL on macOS > Prevention",
+          "distance": 0.18825068683909862
+        },
+        {
+          "document": "build_systems/cmake-dependencies.md",
+          "section": "CMake dependencies > find_package and CMAKE_PREFIX_PATH",
+          "distance": 0.23125168904641447
+        }
+      ],
+      "latencies_ms": [
+        55.482083931565285,
+        53.335083182901144,
+        48.35754097439349,
+        47.13866696693003,
+        57.844291906803846
+      ]
+    },
+    {
+      "id": "workers-flag-replacement",
+      "text": "Which option replaces --orbit-workers?",
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "retrieved": [
+        {
+          "document": "releases/orbit-4.1.md",
+          "section": "Orbit 4.1 release notes > Deprecations",
+          "distance": 0.2984030246734619
+        },
+        {
+          "document": "releases/orbit-5.0.md",
+          "section": "Orbit 5.0 release notes > Upgrade notes",
+          "distance": 0.32407845998277907
+        },
+        {
+          "document": "releases/orbit-5.0.md",
+          "section": "Orbit 5.0 release notes > Breaking changes",
+          "distance": 0.34702789783477783
+        },
+        {
+          "document": "build_systems/cmake-dependencies.md",
+          "section": "CMake dependencies > Threads",
+          "distance": 0.3935076594352722
+        },
+        {
+          "document": "releases/orbit-5.0.md",
+          "section": "Orbit 5.0 release notes",
+          "distance": 0.41778743267059326
+        }
+      ],
+      "latencies_ms": [
+        45.482125133275986,
+        44.64133316650987,
+        38.138374919071794,
+        39.847333217039704,
+        35.67629191093147
+      ]
+    },
+    {
+      "id": "aarch64-tests",
+      "text": "How are aarch64 tests run on x86_64 CI runners?",
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "retrieved": [
+        {
+          "document": "build_systems/cmake-cross-compiling.md",
+          "section": "Cross-compiling with CMake > Running tests",
+          "distance": 0.19154487898678163
+        },
+        {
+          "document": "build_systems/cmake-cross-compiling.md",
+          "section": "Cross-compiling with CMake",
+          "distance": 0.27543944120407104
+        },
+        {
+          "document": "releases/orbit-4.2.md",
+          "section": "Orbit 4.2 release notes > Build changes",
+          "distance": 0.3165725062234691
+        },
+        {
+          "document": "build_systems/cmake-cross-compiling.md",
+          "section": "Cross-compiling with CMake > The toolchain file",
+          "distance": 0.38662242889404297
+        },
+        {
+          "document": "ci/openssl-not-found-macos.md",
+          "section": "CI failure: Could NOT find OpenSSL on macOS",
+          "distance": 0.3930652503332336
+        }
+      ],
+      "latencies_ms": [
+        34.01579102501273,
+        37.31091599911451,
+        36.832291865721345,
+        34.53716682270169,
+        35.19620816223323
+      ]
+    },
+    {
+      "id": "remote-cache-outage",
+      "text": "What happens to a build when the remote cache cannot be reached?",
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "retrieved": [
+        {
+          "document": "build_systems/bazel-remote-cache.md",
+          "section": "Bazel remote cache > When the cache is unreachable",
+          "distance": 0.25798870480262415
+        },
+        {
+          "document": "ci/bazel-remote-cache-unavailable.md",
+          "section": "CI failure: Bazel remote cache UNAVAILABLE > Fix",
+          "distance": 0.2802245878905498
+        },
+        {
+          "document": "ci/bazel-remote-cache-unavailable.md",
+          "section": "CI failure: Bazel remote cache UNAVAILABLE > Symptom",
+          "distance": 0.28261584496951697
+        },
+        {
+          "document": "build_systems/bazel-remote-cache.md",
+          "section": "Bazel remote cache > Diagnosing cache misses",
+          "distance": 0.29578746036515224
+        },
+        {
+          "document": "ci/bazel-remote-cache-unavailable.md",
+          "section": "CI failure: Bazel remote cache UNAVAILABLE > Prevention",
+          "distance": 0.30551614695594453
+        }
+      ],
+      "latencies_ms": [
+        36.631750175729394,
+        38.219833048060536,
+        37.64729201793671,
+        42.07337484695017,
+        44.18308404274285
+      ]
+    },
+    {
+      "id": "cmake-minimum-5-0",
+      "text": "What CMake version does Orbit 5.0 require?",
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "retrieved": [
+        {
+          "document": "ci/cmake-version-too-old.md",
+          "section": "CI failure: CMake version too old after the 5.0 upgrade > Cause",
+          "distance": 0.16591217619442078
+        },
+        {
+          "document": "releases/orbit-4.0.md",
+          "section": "Orbit 4.0 release notes > Breaking changes",
+          "distance": 0.18982719092016098
+        },
+        {
+          "document": "releases/orbit-4.0.md",
+          "section": "Orbit 4.0 release notes",
+          "distance": 0.2011919259669771
+        },
+        {
+          "document": "ci/cmake-version-too-old.md",
+          "section": "CI failure: CMake version too old after the 5.0 upgrade",
+          "distance": 0.202123784955624
+        },
+        {
+          "document": "build_systems/cmake-dependencies.md",
+          "section": "CMake dependencies",
+          "distance": 0.2510813101803836
+        }
+      ],
+      "latencies_ms": [
+        48.400457948446274,
+        38.445458048954606,
+        38.033375050872564,
+        34.232540987432,
+        34.747958183288574
+      ]
+    },
+    {
+      "id": "slow-benchmarks",
+      "text": "Benchmarks built with Ninja are unexpectedly slow and no build type was chosen. Why?",
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "retrieved": [
+        {
+          "document": "build_systems/cmake-presets.md",
+          "section": "CMake presets > Build types",
+          "distance": 0.26640754339762385
+        },
+        {
+          "document": "ci/linker-killed-exit-code-137.md",
+          "section": "CI failure: linker killed with exit code 137 > Fix",
+          "distance": 0.3915290780488413
+        },
+        {
+          "document": "ci/linker-killed-exit-code-137.md",
+          "section": "CI failure: linker killed with exit code 137 > Cause",
+          "distance": 0.392684871612345
+        },
+        {
+          "document": "ci/bazel-remote-cache-unavailable.md",
+          "section": "CI failure: Bazel remote cache UNAVAILABLE",
+          "distance": 0.4092749181173715
+        },
+        {
+          "document": "build_systems/cmake-presets.md",
+          "section": "CMake presets > Configure presets",
+          "distance": 0.4170455758883228
+        }
+      ],
+      "latencies_ms": [
+        40.739000076428056,
+        50.883958116173744,
+        40.68645811639726,
+        46.97066592052579,
+        36.215415922924876
+      ]
+    }
+  ]
+}
