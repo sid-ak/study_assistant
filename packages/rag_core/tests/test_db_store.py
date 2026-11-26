@@ -56,6 +56,8 @@ def test_store_bound_to_an_unregistered_model_is_refused(db_store: Store) -> Non
         unregistered.add_chunks([make_chunk(doc_id, 4)])
     with pytest.raises(EmbedderNotFoundError):
         unregistered.get_chunks_by_document(doc_id)
+    with pytest.raises(EmbedderNotFoundError):
+        unregistered.search_dense([1.0, 0.0, 0.0, 0.0], limit=1)
 
 
 def test_chunk_order_does_not_depend_on_physical_row_order(db_store: Store) -> None:

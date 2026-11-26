@@ -3,19 +3,33 @@
 A lightweight fake so tests that only need storage semantics — not real pgvector — run without a
 database. It mirrors the concrete ``Store``'s CRUD contract: hash-keyed idempotent document upsert,
 unique document and chunk ids, the chunk -> document foreign key with cascade on delete, per-model
-embeddings with one model per store instance, and the same ``user_id`` default. It does not model
-vector or full-text search; those are exercised by the DB-backed integration tests against
-``Store``.
+embeddings with one model per store instance, and the same ``user_id`` default. Dense search is
+exact: it compares the query with every chunk, where the database uses an approximate index. It
+does not model full-text search.
 """
 
 import copy
+import math
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
 from rag_core.config import settings
 from rag_core.store.embedders import EmbedderInfo
 from rag_core.store.errors import DuplicateIdError, MissingDocumentError
-from rag_core.store.validation import check_dimensions
+from rag_core.store.validation import check_dimensions, check_search
+
+
+def cosine_distance(a: Sequence[float], b: Sequence[float]) -> float:
+    """``1 - cosine similarity`` of two non-zero vectors of the same length."""
+    dot = 0.0
+    a_squares = 0.0
+    b_squares = 0.0
+    for x, y in zip(a, b, strict=True):
+        dot += x * y
+        a_squares += x * x
+        b_squares += y * y
+    return 1.0 - dot / math.sqrt(a_squares * b_squares)
 
 
 class InMemoryStore:
@@ -134,3 +148,34 @@ class InMemoryStore:
             for c in self.chunks.values()
             if c["document_id"] == document_id
         ]
+
+    def search_dense(self, query_embedding: Sequence[float], limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks nearest to ``query_embedding`` by cosine distance.
+
+        Compares the query with every chunk, so it is exact where the database's index search is
+        approximate. Equal distances keep insertion order.
+        """
+        check_search(query_embedding, limit, self.embedder)
+        # Each entry is (distance, insertion position, chunk). Sorting the tuples orders by
+        # distance first and breaks ties by position, so the chunk dicts are never compared.
+        scored: list[tuple[float, int, dict[str, Any]]] = []
+        position = 0
+        for chunk in self.chunks.values():
+            embedding = chunk["embeddings"].get(self.embedder.model_id)
+            if embedding is not None:
+                distance = cosine_distance(query_embedding, embedding)
+                scored.append((distance, position, chunk))
+            position += 1
+        scored.sort()
+        results: list[dict[str, Any]] = []
+        for distance, _, chunk in scored[:limit]:
+            results.append(
+                {
+                    "id": chunk["id"],
+                    "document_id": chunk["document_id"],
+                    "content": chunk["content"],
+                    "metadata": copy.deepcopy(chunk["metadata"]),
+                    "distance": distance,
+                }
+            )
+        return results

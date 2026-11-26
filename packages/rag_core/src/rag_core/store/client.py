@@ -1,11 +1,12 @@
 """The concrete pgvector-backed ``Store`` — the DB implementation of ``StoreProtocol``."""
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
 import psycopg
+from pgvector import Vector
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
@@ -18,7 +19,7 @@ from rag_core.store.errors import (
     MissingDocumentError,
 )
 from rag_core.store.schema import SCHEMA_SQL, embedding_column
-from rag_core.store.validation import check_dimensions
+from rag_core.store.validation import check_dimensions, check_search
 
 
 class Store:
@@ -160,3 +161,22 @@ class Store:
                 "FROM chunks WHERE document_id = %s ORDER BY seq"
             ).format(column)
             return conn.execute(query, (document_id,)).fetchall()
+
+    def search_dense(self, query_embedding: Sequence[float], limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks nearest to ``query_embedding`` by cosine distance.
+
+        ``ORDER BY <column> <=> query LIMIT n`` is the shape the column's HNSW index serves, so the
+        search is approximate once the planner uses the index. No tie-breaking column is added to
+        the ``ORDER BY``: a second sort key stops Postgres from using the index.
+        """
+        check_search(query_embedding, limit, self.embedder)
+        with self.get_connection() as conn, self._embedder_column() as column:
+            query = sql.SQL(
+                "SELECT id, document_id, content, metadata, {column} <=> %(query)s AS distance "
+                "FROM chunks WHERE {column} IS NOT NULL "
+                "ORDER BY {column} <=> %(query)s LIMIT %(limit)s"
+            ).format(column=column)
+            # A plain list binds as double precision[], which has no <=> operator; Vector binds as
+            # pgvector's own type.
+            parameters = {"query": Vector(list(query_embedding)), "limit": limit}
+            return conn.execute(query, parameters).fetchall()
