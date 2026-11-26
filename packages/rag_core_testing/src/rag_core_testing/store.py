@@ -149,13 +149,16 @@ class InMemoryStore:
             if c["document_id"] == document_id
         ]
 
-    def search_dense(self, query_embedding: Sequence[float], limit: int) -> list[dict[str, Any]]:
+    def search_dense(
+        self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None
+    ) -> list[dict[str, Any]]:
         """Return up to ``limit`` chunks nearest to ``query_embedding`` by cosine distance.
 
         Compares the query with every chunk, so it is exact where the database's index search is
-        approximate. Equal distances keep insertion order.
+        approximate, and ``ef_search`` is checked but has nothing to tune. Equal distances keep
+        insertion order.
         """
-        check_search(query_embedding, limit, self.embedder)
+        check_search(query_embedding, limit, self.embedder, ef_search)
         # Each entry is (distance, insertion position, chunk). Sorting the tuples orders by
         # distance first and breaks ties by position, so the chunk dicts are never compared.
         scored: list[tuple[float, int, dict[str, Any]]] = []

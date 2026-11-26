@@ -15,6 +15,8 @@ from rag_core.store.errors import (
 
 # The largest vector dimension the store can index for similarity search.
 MAX_EMBEDDING_DIMENSION = 2000
+# The largest candidate-list size an approximate search accepts.
+MAX_EF_SEARCH = 1000
 
 
 def check_embedding(embedding: Sequence[float], embedder: EmbedderInfo, label: str) -> None:
@@ -40,10 +42,28 @@ def check_dimensions(chunks: Sequence[dict[str, Any]], embedder: EmbedderInfo) -
         check_embedding(chunk["embedding"], embedder, f"Chunk {chunk['id']}")
 
 
-def check_search(query_embedding: Sequence[float], limit: int, embedder: EmbedderInfo) -> None:
-    """Raise unless ``limit`` is at least one and ``query_embedding`` fits ``embedder``."""
+def check_search(
+    query_embedding: Sequence[float],
+    limit: int,
+    embedder: EmbedderInfo,
+    ef_search: int | None = None,
+) -> None:
+    """Raise unless the search arguments are valid for ``embedder``.
+
+    ``limit`` must be at least one and ``query_embedding`` must fit ``embedder``. ``ef_search``, if
+    given, must be 1 to ``MAX_EF_SEARCH`` and at least ``limit``, because an approximate search
+    returns no more results than the candidates it keeps.
+    """
     if limit < 1:
         raise ValueError(f"limit must be at least 1, not {limit}.")
+    if ef_search is not None:
+        if ef_search < 1 or ef_search > MAX_EF_SEARCH:
+            raise ValueError(f"ef_search must be 1 to {MAX_EF_SEARCH}, not {ef_search}.")
+        if ef_search < limit:
+            raise ValueError(
+                f"ef_search ({ef_search}) must be at least limit ({limit}), "
+                "or the search returns fewer results than asked for."
+            )
     check_embedding(query_embedding, embedder, "The query")
 
 

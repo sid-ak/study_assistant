@@ -110,6 +110,11 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   is `ORDER BY <column> <=> query LIMIT n` with no second sort key, because a tie-breaking column
   stops Postgres from using the HNSW index (checked with `EXPLAIN`). Equal distances therefore
   have no defined order, and contract tests avoid ties.
+- `ef_search` is the only HNSW parameter retrieval varies. `m` and `ef_construction` are build-time
+  index options and stay at pgvector's defaults. The store sets `ef_search` with
+  `set_config('hnsw.ef_search', ..., true)`, local to the search's transaction. Postgres accepts
+  any value for that setting before pgvector is loaded in the session, so `check_search` enforces
+  the 1 to 1000 range and `ef_search >= limit` (HNSW returns at most `ef_search` rows).
 - Bind a query vector as `pgvector.Vector` or a numpy array. A plain Python list binds as
   `double precision[]`, which has no `<=>` operator.
 - The DB search is approximate once the planner uses the index; `InMemoryStore` compares against

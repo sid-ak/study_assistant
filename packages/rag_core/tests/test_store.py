@@ -451,6 +451,33 @@ def test_search_dense_rejects_a_zero_query_vector(store: StoreProtocol) -> None:
         store.search_dense([0.0] * store.embedder.dimension, limit=1)
 
 
+def test_search_dense_accepts_an_ef_search(store: StoreProtocol) -> None:
+    """A search with ``ef_search`` set returns the nearest chunks, nearest first."""
+    dimension = store.embedder.dimension
+    far, near = add_chunks_with_embeddings(
+        store, [unit_vector([0.0, 1.0], dimension), unit_vector([1.0, 0.0], dimension)]
+    )
+    results = store.search_dense(unit_vector([1.0, 0.0], dimension), limit=2, ef_search=100)
+    assert [result["id"] for result in results] == [near, far]
+
+
+@pytest.mark.parametrize("ef_search", [0, 1001])
+def test_search_dense_rejects_an_ef_search_out_of_range(
+    store: StoreProtocol, ef_search: int
+) -> None:
+    """``ef_search`` must be between 1 and 1000, the range the index accepts."""
+    with pytest.raises(ValueError, match="ef_search"):
+        store.search_dense(
+            unit_vector([1.0], store.embedder.dimension), limit=1, ef_search=ef_search
+        )
+
+
+def test_search_dense_rejects_an_ef_search_below_the_limit(store: StoreProtocol) -> None:
+    """An ``ef_search`` smaller than ``limit`` is refused, since it would cap the results."""
+    with pytest.raises(ValueError, match="ef_search"):
+        store.search_dense(unit_vector([1.0], store.embedder.dimension), limit=5, ef_search=4)
+
+
 def test_add_chunks_rejects_a_zero_embedding(store: StoreProtocol) -> None:
     """An all-zero embedding has no direction to search by, so the whole batch is refused."""
     doc_id = uuid.uuid4()
