@@ -28,9 +28,10 @@ Chunk 1 (#46) adds ingestion and dense retrieval:
 - The MVP corpus is an original set of release-engineering documents in
   `corpus/release_engineering/` (ADR 0009).
 
-Chunk 2 (#47), the golden-set evaluation harness, is in progress in `evals/`. Its golden-set
-format labels each question by document and section heading rather than by chunk, so labels
-survive re-chunking. Re-embedding existing chunks into a newly
+Chunk 2 (#47), the golden-set evaluation harness, is in progress in `evals/`. Ten golden
+questions are labeled by document and section heading rather than by chunk, so labels survive
+re-chunking. `study-eval <name>` scores them against the ingested corpus, reporting Recall@5, MRR,
+and p50 and p95 latency, and saves the run in `evals/results/`. Re-embedding existing chunks into a newly
 registered model's column is still to come (issue #15). Later phases add the MCP server, the
 FastAPI backend, and the React frontend.
 

@@ -7,6 +7,9 @@ dependencies = [
     "rag_core",
 ]
 
+[project.scripts]
+study-eval = "evals.main:main"
+
 [tool.uv.sources]
 rag_core = { workspace = true }
 

@@ -160,3 +160,27 @@
    :members:
    :show-inheritance:
 ```
+
+## evals.metrics
+
+```{eval-rst}
+.. automodule:: evals.metrics
+   :members:
+   :show-inheritance:
+```
+
+## evals.runner
+
+```{eval-rst}
+.. automodule:: evals.runner
+   :members:
+   :show-inheritance:
+```
+
+## evals.main
+
+```{eval-rst}
+.. automodule:: evals.main
+   :members:
+   :show-inheritance:
+```

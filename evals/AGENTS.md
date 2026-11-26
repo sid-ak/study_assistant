@@ -14,6 +14,9 @@ it are the local retrieval stack with an owned eval loop (0002, models in 0010) 
 - `src/evals/`: the harness.
   - `golden.py`: the golden-set format, its loader, and `check_labels`, which confirms every
     label names a heading that a chunk can carry.
+  - `metrics.py`: label matching, recall, reciprocal rank, and nearest-rank percentiles.
+  - `runner.py`: `run_eval`, which retrieves and scores every question, and `write_run`.
+  - `main.py`: the `study-eval` console script.
 - `tests/`: unit tests, run by the root `pytest`.
 
 ## Conventions
@@ -27,5 +30,19 @@ it are the local retrieval stack with an owned eval loop (0002, models in 0010) 
 - The loader rejects anything it does not understand, including unknown keys, and a unit test runs
   `check_labels` over the committed golden set and corpus. A typo in a label, or a corpus edit that
   renames a heading, fails CI instead of silently never matching.
-- A question lists every section that answers it, so one answer spread over two documents, for example a
-  release note and a CI write-up, is two labels.
+- A question lists every section that answers it, so one answer spread over two documents, for
+  example a release note and a CI write-up, is two labels.
+
+## Running an evaluation
+
+`uv run study-eval <name>` scores the golden set against the ingested corpus with the configured
+embedding model and saves the run as `evals/results/<name>.json`. It needs the database and an
+ingested corpus (`uv run study ingest corpus/release_engineering`).
+
+- Metrics: Recall@k is the share of a question's labeled sections found in its top `k` chunks,
+  averaged over questions. MRR averages one over the rank of the first matching chunk. Latency is
+  the p50 and p95, by nearest rank, over `repeats` timed retrievals per question, each covering
+  query embedding and search. One untimed retrieval first absorbs the model load.
+- Inputs are checked before any retrieval: a taken run name, a malformed golden set, or a label
+  that names no heading exits with status 2.
+- Saved runs are never overwritten. A new measurement gets a new name.
