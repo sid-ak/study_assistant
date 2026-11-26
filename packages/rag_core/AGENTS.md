@@ -85,3 +85,19 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
 - `add_chunks` bulk-inserts via the `COPY ... FORMAT BINARY` protocol, not per-row `INSERT` — keep
   new batch-write paths on `COPY` for the same throughput reason. Each batch is all-or-nothing,
   pinned for both stores by `test_add_chunks_is_all_or_nothing`, so a failed batch writes nothing.
+
+## Embedder conventions
+
+- Callers depend on `EmbedderProtocol` (`rag_core.embed`), never on `FastembedEmbedder`. An
+  embedder's `info` is the `EmbedderInfo` a store is bound to, so bind stores with
+  `store.with_embedder(embedder.info)` and the vectors always land in that model's column.
+- Vectors are unit length, so cosine similarity equals the dot product. `HashingEmbedder` in
+  `rag_core_testing` keeps that property, and the contract suite in `test_embedder.py` pins it.
+- `FastembedEmbedder` loads lazily: building one checks the model id and dimension against
+  fastembed's built-in model list (no network) and loads nothing. The first embed call downloads
+  the files, if needed, and loads the model. fastembed's own `lazy_load=True` still downloads at
+  construction, so the deferral lives in `FastembedEmbedder.load`.
+- `embed_query` prepends `query_prefix`, and `embed_documents` embeds text as given. fastembed's
+  `query_embed` adds no instruction for the bge models, so the prefix is applied here.
+- The configured model comes from `Settings` (`EMBEDDING_MODEL`, `EMBEDDING_DIMENSION`,
+  `EMBEDDING_QUERY_PREFIX`), read through `FastembedEmbedder.from_settings`.

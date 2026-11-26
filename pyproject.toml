@@ -62,6 +62,6 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["packages"]
 markers = [
-    "integration: tests that require a live Postgres+pgvector instance (docker compose up -d)",
+    "integration: tests that need a live Postgres+pgvector instance (docker compose up -d) or download and load a real model",
     "unit: fast tests with no external services (auto-applied to every non-integration test)",
 ]

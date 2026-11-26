@@ -5,6 +5,7 @@ description = "Shared retrieval core: ingestion, embedding, hybrid retrieval, re
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "fastembed>=0.9.1",
     "pgvector>=0.4.2",
     "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.14.2",

@@ -33,6 +33,22 @@
    :show-inheritance:
 ```
 
+## rag_core.embed.protocol
+
+```{eval-rst}
+.. automodule:: rag_core.embed.protocol
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.embed.fastembed_embedder
+
+```{eval-rst}
+.. automodule:: rag_core.embed.fastembed_embedder
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.store.protocol
 
 ```{eval-rst}

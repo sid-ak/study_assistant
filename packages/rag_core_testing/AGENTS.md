@@ -10,7 +10,11 @@ the root [`AGENTS.md`](../../AGENTS.md) for project-wide context and
 - `store.py`: `InMemoryStore`, a fake of `rag_core.store.StoreProtocol`.
 - `embedders.py`: `InMemoryEmbedderRegistry`, a fake of
   `rag_core.store.embedders.EmbedderRegistryProtocol`.
-- `factories.py`: test data, such as the small-dimension `EMBEDDER_A` / `EMBEDDER_B` and
+- `embedding.py`: `HashingEmbedder`, a fake of `rag_core.embed.EmbedderProtocol` that hashes words
+  into buckets. Texts that share words score as similar, so ranking tests run without a model. Its
+  default model is `HASHING_EMBEDDER` (64 dimensions).
+- `factories.py`: test data, such as the small-dimension `EMBEDDER_A` / `EMBEDDER_B`,
+  `HASHING_EMBEDDER`, and
   `make_chunk`, which builds a valid `add_chunks` row.
 
 ## Conventions

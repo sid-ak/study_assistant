@@ -73,7 +73,8 @@ entry point — keep package-specific detail in the package's own `AGENTS.md`.
   change to the workflow only takes effect once it is on `main`.
 - Run the whole suite with `uv run pytest`. Integration tests need the database — run
   `docker compose up -d` first or they fail to connect.
-- Integration tests are marked `@pytest.mark.integration`. Scope a run with `uv run pytest -m unit`
+- Integration tests are marked `@pytest.mark.integration`. Besides the database tests, this covers
+  tests that download and load a real model (the first run fetches it into fastembed's cache). Scope a run with `uv run pytest -m unit`
   (fast, no DB) or `-m integration` (DB-backed); target one test with `uv run pytest -k "<name>"`.
   The `unit` marker is auto-applied to every non-integration test by the root `conftest.py`, so
   `-m unit` always selects the full fast suite — mark only integration tests explicitly.
