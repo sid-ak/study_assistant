@@ -33,6 +33,14 @@
    :show-inheritance:
 ```
 
+## rag_core.ingest.pipeline
+
+```{eval-rst}
+.. automodule:: rag_core.ingest.pipeline
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.embed.protocol
 
 ```{eval-rst}
@@ -45,6 +53,14 @@
 
 ```{eval-rst}
 .. automodule:: rag_core.embed.fastembed_embedder
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.embed.binding
+
+```{eval-rst}
+.. automodule:: rag_core.embed.binding
    :members:
    :show-inheritance:
 ```

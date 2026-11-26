@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from rag_core.embed.binding import check_same_model
 from rag_core.embed.protocol import EmbedderProtocol
 from rag_core.store.protocol import StoreProtocol
 
@@ -43,11 +44,7 @@ def retrieve(
     anything is embedded. ``ef_search`` is passed to the store's approximate search. The latency
     covers embedding the query and searching the store, measured with a monotonic clock.
     """
-    if embedder.info != store.embedder:
-        raise ValueError(
-            f"The embedder is {embedder.info.model_id!r} but the store holds vectors for "
-            f"{store.embedder.model_id!r}; bind the store with store.with_embedder(embedder.info)."
-        )
+    check_same_model(embedder, store)
     started = time.perf_counter()
     query_embedding = embedder.embed_query(query)
     rows = store.search_dense(query_embedding, limit=limit, ef_search=ef_search)
