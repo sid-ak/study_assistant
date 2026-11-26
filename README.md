@@ -31,7 +31,9 @@ Chunk 1 (#46) adds ingestion and dense retrieval:
 Chunk 2 (#47), the golden-set evaluation harness, is in progress in `evals/`. Ten golden
 questions are labeled by document and section heading rather than by chunk, so labels survive
 re-chunking. `study-eval <name>` scores them against the ingested corpus, reporting Recall@5, MRR,
-and p50 and p95 latency, and saves the run in `evals/results/`. Re-embedding existing chunks into a newly
+and p50 and p95 latency, and saves the run in `evals/results/`. The dense baseline with
+`bge-small-en-v1.5` scores Recall@5 0.90 and MRR 0.88. An exact error code ranks third, and two
+questions whose answer spans two documents find only one of their sections. Re-embedding existing chunks into a newly
 registered model's column is still to come (issue #15). Later phases add the MCP server, the
 FastAPI backend, and the React frontend.
 
@@ -56,6 +58,12 @@ Ingest the MVP corpus and search it. The first run downloads the 64 MB embedding
 ```sh
 uv run study ingest corpus/release_engineering
 uv run study query "Which Bazel flag turns on AddressSanitizer?"
+```
+
+Score retrieval on the golden set and save the run as `evals/results/<name>.json`:
+
+```sh
+uv run study-eval my-run
 ```
 
 Verify pgvector is live:
