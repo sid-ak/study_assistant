@@ -151,6 +151,8 @@ study_assistant/
 │       └── src/
 │           ├── components/      # chat, citation rendering, HITL approval
 │           └── api/             # SSE client
+├── corpus/                      # MVP document set (ADR 0009)
+│   └── release_engineering/     # markdown: build guides, release notes, CI failure write-ups
 ├── evals/                       # golden-set eval harness — depends on rag_core
 │   ├── AGENTS.md                # canonical context — golden-set labels, metrics, results
 │   ├── pyproject.toml

@@ -9,6 +9,8 @@ from rag_core.store.embedders import EmbedderInfo
 # Small dimensions keep the test vectors cheap; nothing in the store depends on a production size.
 EMBEDDER_A = EmbedderInfo(model_id="test/embedder-a", dimension=8)
 EMBEDDER_B = EmbedderInfo(model_id="test/embedder-b", dimension=4)
+# The hashing fake embedder's model. Wide enough that unrelated words rarely share a bucket.
+HASHING_EMBEDDER = EmbedderInfo(model_id="test/hashing-embedder", dimension=64)
 
 
 def make_chunk(document_id: UUID, dimension: int, **overrides: Any) -> dict[str, Any]:

@@ -1,7 +1,7 @@
 """Sphinx configuration for the Study Assistant documentation site.
 
 Builds one static site from the all-Markdown documentation tree (via myst-parser) plus an autodoc
-API reference for rag_core. Build with:
+API reference for rag_core and the study CLI. Build with:
 
     uv run sphinx-build -b html docs site -W
 """
@@ -11,9 +11,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# autodoc imports the package to read its docstrings/type hints, so put rag_core's src-layout
+# autodoc imports the packages to read their docstrings/type hints, so put their src-layout
 # source on sys.path (the workspace install works too; this keeps the build self-contained).
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "packages" / "rag_core" / "src"))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "packages" / "rag_core" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "cli" / "src"))
 
 project = "Study Assistant"
 author = "Sid Anandkumar"

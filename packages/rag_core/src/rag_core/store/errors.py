@@ -31,3 +31,7 @@ class DuplicateIdError(StoreError):
 
 class UnsupportedDimensionError(StoreError):
     """An embedder's dimension is outside the range the store can store and index."""
+
+
+class ZeroEmbeddingError(StoreError):
+    """An embedding is all zeros, so it has no direction and no cosine distance to anything."""

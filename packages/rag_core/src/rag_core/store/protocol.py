@@ -8,6 +8,7 @@ The contract describes behavior only. Backend handles such as connections are de
 part of it, so code typed against the protocol cannot reach past it into a particular backend.
 """
 
+from collections.abc import Sequence
 from typing import Any, Protocol, runtime_checkable
 from uuid import UUID
 
@@ -89,6 +90,28 @@ class StoreProtocol(Protocol):
 
         Each chunk's ``embedding`` is this store's ``embedder``'s vector, or ``None`` if that model
         has not embedded the chunk yet. Raises ``EmbedderNotFoundError`` if the embedder is not
+        registered.
+        """
+        ...
+
+    def search_dense(
+        self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None
+    ) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks nearest to ``query_embedding``, nearest first.
+
+        Nearness is cosine distance, ``1 - cosine similarity``, from 0 (same direction) to 2
+        (opposite). Each result holds the chunk's ``id``, ``document_id``, ``content``, and a copy
+        of its ``metadata``, plus its ``distance``. Only chunks this store's ``embedder`` has
+        embedded are searched. Equally distant chunks come back in no defined order.
+
+        The search may be approximate: it can miss a chunk an exhaustive comparison would rank in
+        the top ``limit``. ``ef_search``, when given, sets how many candidates an approximate
+        search keeps while it runs, from 1 to 1000 and at least ``limit``; larger values find
+        more of the true nearest chunks and take longer. ``None`` keeps the backend's default.
+
+        Raises ``EmbeddingDimensionError`` if the query's length is not the embedder's dimension,
+        ``ZeroEmbeddingError`` if the query is all zeros, ``ValueError`` if ``limit`` is below one
+        or ``ef_search`` is out of range, and ``EmbedderNotFoundError`` if the embedder is not
         registered.
         """
         ...

@@ -17,6 +17,70 @@
    :show-inheritance:
 ```
 
+## rag_core.ingest.markdown
+
+```{eval-rst}
+.. automodule:: rag_core.ingest.markdown
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.ingest.chunking
+
+```{eval-rst}
+.. automodule:: rag_core.ingest.chunking
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.ingest.pipeline
+
+```{eval-rst}
+.. automodule:: rag_core.ingest.pipeline
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.embed.protocol
+
+```{eval-rst}
+.. automodule:: rag_core.embed.protocol
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.embed.fastembed_embedder
+
+```{eval-rst}
+.. automodule:: rag_core.embed.fastembed_embedder
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.embed.binding
+
+```{eval-rst}
+.. automodule:: rag_core.embed.binding
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.embed.registration
+
+```{eval-rst}
+.. automodule:: rag_core.embed.registration
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.retrieve.dense
+
+```{eval-rst}
+.. automodule:: rag_core.retrieve.dense
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.store.protocol
 
 ```{eval-rst}
@@ -77,6 +141,14 @@
 
 ```{eval-rst}
 .. automodule:: rag_core.store.embedders.client
+   :members:
+   :show-inheritance:
+```
+
+## study_cli.main
+
+```{eval-rst}
+.. automodule:: study_cli.main
    :members:
    :show-inheritance:
 ```

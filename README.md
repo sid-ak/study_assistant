@@ -12,17 +12,25 @@ hosted model, and a local runtime works through the same adapter.
 
 ## Status
 
-Phase 1 — Storage + Schema is complete. Next is Phase 1.5 — MVP (issue #45), a thin end-to-end
-slice from ingestion to a cited answer. Its models are settled: `fastembed` runs the embedder and
-reranker locally (ADR 0010), and generation uses Groq's free plan (ADR 0011). The repo contains the
-`uv` workspace root, the
-shared `packages/rag_core/` library with the pgvector storage layer behind a `StoreProtocol`
-interface (with in-memory fakes in the dev-only `packages/rag_core_testing/` for DB-free unit
-tests), and the Postgres + pgvector dev stack.
-Embeddings are stored in per-model columns registered at runtime (ADR 0008); re-embedding between
-models is still to come (issue #15).
-Later phases add ingestion, retrieval logic, the CLI, MCP server, FastAPI backend, and React
-frontend.
+Phase 1 — Storage + Schema is complete. Phase 1.5 — MVP (issue #45) is in progress: a thin
+end-to-end slice from ingestion to a cited answer, built in seven chunks. Its models are settled:
+`fastembed` runs the embedder and reranker locally (ADR 0010), and generation uses Groq's free
+plan (ADR 0011).
+
+Chunk 1 (#46) adds ingestion and dense retrieval:
+
+- The `study` CLI (`cli/`) ingests a folder of markdown with `study ingest <folder>` and searches
+  it with `study query "<text>"`, printing each chunk's cosine distance and the latency.
+- Ingestion splits documents at their headings, embeds each chunk with `bge-small-en-v1.5`, and
+  stores it in that model's own pgvector column (ADR 0008). Re-runs write only changed files.
+- Retrieval ranks chunks by cosine distance. Postgres uses the column's HNSW index once the
+  table is large enough to prefer it over an exact scan, and `ef_search` is settable per query.
+- The MVP corpus is an original set of release-engineering documents in
+  `corpus/release_engineering/` (ADR 0009).
+
+Next is the golden-set evaluation harness (#47). Re-embedding existing chunks into a newly
+registered model's column is still to come (issue #15). Later phases add the MCP server, the
+FastAPI backend, and the React frontend.
 
 ## Prerequisites
 
@@ -38,6 +46,13 @@ uv sync                       # resolve + install the workspace
 pre-commit install            # enable lint/format/typecheck hooks
 docker compose up -d          # start Postgres with the vector extension
 uv run pytest                 # run the test suite
+```
+
+Ingest the MVP corpus and search it. The first run downloads the 64 MB embedding model.
+
+```sh
+uv run study ingest corpus/release_engineering
+uv run study query "Which Bazel flag turns on AddressSanitizer?"
 ```
 
 Verify pgvector is live:

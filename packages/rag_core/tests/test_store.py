@@ -24,6 +24,7 @@ from rag_core.store import (
     MissingDocumentError,
     Store,
     StoreProtocol,
+    ZeroEmbeddingError,
 )
 from rag_core.store.embedders import EmbedderRegistryProtocol
 from rag_core_testing import EMBEDDER_A, EMBEDDER_B, InMemoryStore, make_chunk
@@ -315,6 +316,178 @@ def test_chunks_come_back_in_insertion_order(store: StoreProtocol) -> None:
     store.add_chunks([make_chunk(doc_id, dimension, id=i) for i in ids[3:]])
 
     assert [c["id"] for c in store.get_chunks_by_document(doc_id)] == ids
+
+
+def unit_vector(values: list[float], dimension: int) -> list[float]:
+    """``values`` scaled to length 1 and padded with zeros to ``dimension``."""
+    length = 0.0
+    for value in values:
+        length += value * value
+    length = length**0.5
+    vector = [value / length for value in values]
+    return vector + [0.0] * (dimension - len(vector))
+
+
+def add_chunks_with_embeddings(
+    store: StoreProtocol, embeddings: list[list[float]]
+) -> list[uuid.UUID]:
+    """Store one document with one chunk per embedding; return the chunk ids in that order."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash=str(doc_id))
+    chunks = []
+    for embedding in embeddings:
+        chunks.append(make_chunk(doc_id, store.embedder.dimension, embedding=embedding))
+    store.add_chunks(chunks)
+    return [chunk["id"] for chunk in chunks]
+
+
+def test_search_dense_ranks_nearest_first_with_cosine_distance(store: StoreProtocol) -> None:
+    """Results come back by ascending cosine distance, each with its distance."""
+    dimension = store.embedder.dimension
+    far, near, middle = add_chunks_with_embeddings(
+        store,
+        [
+            unit_vector([0.0, 1.0], dimension),
+            unit_vector([1.0, 0.0], dimension),
+            unit_vector([0.8, 0.6], dimension),
+        ],
+    )
+    results = store.search_dense(unit_vector([1.0, 0.0], dimension), limit=3)
+
+    assert [result["id"] for result in results] == [near, middle, far]
+    assert [result["distance"] for result in results] == pytest.approx([0.0, 0.2, 1.0], abs=1e-5)
+
+
+def test_search_dense_returns_at_most_limit_results(store: StoreProtocol) -> None:
+    """Only the ``limit`` nearest chunks are returned."""
+    dimension = store.embedder.dimension
+    ids = add_chunks_with_embeddings(
+        store,
+        [
+            unit_vector([1.0, 0.0], dimension),
+            unit_vector([0.8, 0.6], dimension),
+            unit_vector([0.0, 1.0], dimension),
+        ],
+    )
+    results = store.search_dense(unit_vector([1.0, 0.0], dimension), limit=2)
+    assert [result["id"] for result in results] == ids[:2]
+
+
+def test_search_dense_returns_the_chunk_fields(store: StoreProtocol) -> None:
+    """Each result carries the chunk's id, document id, content, and metadata."""
+    dimension = store.embedder.dimension
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    chunk = make_chunk(
+        doc_id,
+        dimension,
+        content="Link with -pthread.",
+        metadata={"source": "ci.md", "section": "Fix"},
+        embedding=unit_vector([1.0], dimension),
+    )
+    store.add_chunks([chunk])
+
+    (result,) = store.search_dense(unit_vector([1.0], dimension), limit=1)
+    assert result["id"] == chunk["id"]
+    assert result["document_id"] == doc_id
+    assert result["content"] == "Link with -pthread."
+    assert result["metadata"] == {"source": "ci.md", "section": "Fix"}
+
+
+def test_search_dense_results_are_copies(store: StoreProtocol) -> None:
+    """Mutating a result's metadata does not change the stored chunk."""
+    dimension = store.embedder.dimension
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    store.add_chunks(
+        [
+            make_chunk(
+                doc_id, dimension, metadata={"k": "v"}, embedding=unit_vector([1.0], dimension)
+            )
+        ]
+    )
+    (result,) = store.search_dense(unit_vector([1.0], dimension), limit=1)
+    result["metadata"]["k"] = "changed"
+
+    assert store.get_chunks_by_document(doc_id)[0]["metadata"] == {"k": "v"}
+
+
+def test_search_dense_on_an_empty_store_returns_nothing(store: StoreProtocol) -> None:
+    """With no chunks stored, a search returns an empty list."""
+    assert store.search_dense(unit_vector([1.0], store.embedder.dimension), limit=5) == []
+
+
+def test_search_dense_only_sees_chunks_embedded_by_its_model(
+    store: StoreProtocol, embedder_registry: EmbedderRegistryProtocol
+) -> None:
+    """A store searches only the vectors of the model it is bound to."""
+    embedder_registry.register(EMBEDDER_B.model_id, EMBEDDER_B.dimension)
+    store_b = store.with_embedder(EMBEDDER_B)
+    ids_a = add_chunks_with_embeddings(store, [unit_vector([1.0], EMBEDDER_A.dimension)])
+    ids_b = add_chunks_with_embeddings(store_b, [unit_vector([1.0], EMBEDDER_B.dimension)])
+
+    results_a = store.search_dense(unit_vector([1.0], EMBEDDER_A.dimension), limit=5)
+    results_b = store_b.search_dense(unit_vector([1.0], EMBEDDER_B.dimension), limit=5)
+    assert [result["id"] for result in results_a] == ids_a
+    assert [result["id"] for result in results_b] == ids_b
+
+
+def test_search_dense_rejects_a_query_of_the_wrong_dimension(store: StoreProtocol) -> None:
+    """A query vector whose length differs from the store's model raises."""
+    with pytest.raises(EmbeddingDimensionError):
+        store.search_dense(unit_vector([1.0], store.embedder.dimension + 1), limit=1)
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_search_dense_rejects_a_limit_below_one(store: StoreProtocol, limit: int) -> None:
+    """A limit below one is refused."""
+    with pytest.raises(ValueError):
+        store.search_dense(unit_vector([1.0], store.embedder.dimension), limit=limit)
+
+
+def test_search_dense_rejects_a_zero_query_vector(store: StoreProtocol) -> None:
+    """A query with no direction has no cosine distance to anything, so it is refused."""
+    with pytest.raises(ZeroEmbeddingError):
+        store.search_dense([0.0] * store.embedder.dimension, limit=1)
+
+
+def test_search_dense_accepts_an_ef_search(store: StoreProtocol) -> None:
+    """A search with ``ef_search`` set returns the nearest chunks, nearest first."""
+    dimension = store.embedder.dimension
+    far, near = add_chunks_with_embeddings(
+        store, [unit_vector([0.0, 1.0], dimension), unit_vector([1.0, 0.0], dimension)]
+    )
+    results = store.search_dense(unit_vector([1.0, 0.0], dimension), limit=2, ef_search=100)
+    assert [result["id"] for result in results] == [near, far]
+
+
+@pytest.mark.parametrize("ef_search", [0, 1001])
+def test_search_dense_rejects_an_ef_search_out_of_range(
+    store: StoreProtocol, ef_search: int
+) -> None:
+    """``ef_search`` must be between 1 and 1000, the range the index accepts."""
+    with pytest.raises(ValueError, match="ef_search"):
+        store.search_dense(
+            unit_vector([1.0], store.embedder.dimension), limit=1, ef_search=ef_search
+        )
+
+
+def test_search_dense_rejects_an_ef_search_below_the_limit(store: StoreProtocol) -> None:
+    """An ``ef_search`` smaller than ``limit`` is refused, since it would cap the results."""
+    with pytest.raises(ValueError, match="ef_search"):
+        store.search_dense(unit_vector([1.0], store.embedder.dimension), limit=5, ef_search=4)
+
+
+def test_add_chunks_rejects_a_zero_embedding(store: StoreProtocol) -> None:
+    """An all-zero embedding has no direction to search by, so the whole batch is refused."""
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="d.md", file_hash="h")
+    dimension = store.embedder.dimension
+    good = make_chunk(doc_id, dimension)
+    zero = make_chunk(doc_id, dimension, embedding=[0.0] * dimension)
+    with pytest.raises(ZeroEmbeddingError):
+        store.add_chunks([good, zero])
+    assert store.get_chunks_by_document(doc_id) == []
 
 
 def test_both_implementations_conform_to_protocol() -> None:

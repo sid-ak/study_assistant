@@ -19,5 +19,12 @@ class Settings(BaseSettings):
     # Default user for single-user local scope
     default_user_id: UUID = UUID("00000000-0000-0000-0000-000000000000")
 
+    # The embedding model ingestion and retrieval use, and its vector dimension.
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_dimension: int = 384
+    # Text put in front of every search query before it is embedded. The bge v1.5 model card
+    # recommends this instruction for short queries matched against longer passages.
+    embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
+
 
 settings = Settings()

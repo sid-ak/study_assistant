@@ -13,6 +13,7 @@ from rag_core.store.errors import (
     MissingDocumentError,
     StoreError,
     UnsupportedDimensionError,
+    ZeroEmbeddingError,
 )
 from rag_core.store.protocol import StoreProtocol
 
@@ -26,4 +27,5 @@ __all__ = [
     "StoreError",
     "StoreProtocol",
     "UnsupportedDimensionError",
+    "ZeroEmbeddingError",
 ]

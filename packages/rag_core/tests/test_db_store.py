@@ -56,6 +56,8 @@ def test_store_bound_to_an_unregistered_model_is_refused(db_store: Store) -> Non
         unregistered.add_chunks([make_chunk(doc_id, 4)])
     with pytest.raises(EmbedderNotFoundError):
         unregistered.get_chunks_by_document(doc_id)
+    with pytest.raises(EmbedderNotFoundError):
+        unregistered.search_dense([1.0, 0.0, 0.0, 0.0], limit=1)
 
 
 def test_chunk_order_does_not_depend_on_physical_row_order(db_store: Store) -> None:
@@ -71,3 +73,19 @@ def test_chunk_order_does_not_depend_on_physical_row_order(db_store: Store) -> N
         conn.execute("CLUSTER chunks USING chunks_pkey")
 
     assert [c["id"] for c in db_store.get_chunks_by_document(doc_id)] == ids
+
+
+def test_each_test_starts_on_a_chunks_table_with_no_dropped_columns(db_store: Store) -> None:
+    """Teardown leaves no dropped per-model columns behind for the next test.
+
+    Postgres keeps a dropped column's slot, and a table holds at most 1600 slots over its lifetime,
+    so a teardown that dropped each test's embedding columns would eventually make every
+    registration fail with "tables can have at most 1600 columns".
+    """
+    with db_store.get_connection() as conn:
+        row = conn.execute(
+            "SELECT count(*) AS dropped FROM pg_attribute "
+            "WHERE attrelid = 'chunks'::regclass AND attisdropped"
+        ).fetchone()
+    assert row is not None
+    assert row["dropped"] == 0

@@ -32,8 +32,8 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   implementations, then real logic), per the three-pass TDD rule in the root `AGENTS.md`.
 - `get_connection()` is deliberately not on `StoreProtocol` — it returns a raw `psycopg` connection
   (the driver dependency ADR 0006 keeps out of retrieval logic). Only the concrete `Store` and the
-  integration tests use it. `get_chunks_by_document` is the one read path chunks do have on the
-  Protocol; if a new read need comes up, prefer extending the Protocol over reaching for
+  integration tests use it. Chunks have two read paths on the Protocol, `get_chunks_by_document`
+  and `search_dense`; if a new read need comes up, prefer extending the Protocol over reaching for
   `get_connection()` from outside `Store`.
 - Test layout mirrors this split: `test_store.py` holds every behavior `StoreProtocol`
   guarantees, parametrized over the `store` fixture (`InMemoryStore` and `Store`, labeled
@@ -73,6 +73,8 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
     or repeats one is refused whole.
   - The chunk foreign key to its document, raising `MissingDocumentError`.
   - Embedding length matching the store's embedder, raising `EmbeddingDimensionError`.
+  - No all-zero embedding, stored or queried, raising `ZeroEmbeddingError`. Cosine distance to a
+    zero vector is NaN in pgvector, so neither store accepts one.
   - An embedder dimension of 1 to `MAX_EMBEDDING_DIMENSION` (2000, the HNSW index limit),
     raising `UnsupportedDimensionError` before anything is registered.
   - All-or-nothing batches.
@@ -85,3 +87,36 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
 - `add_chunks` bulk-inserts via the `COPY ... FORMAT BINARY` protocol, not per-row `INSERT` — keep
   new batch-write paths on `COPY` for the same throughput reason. Each batch is all-or-nothing,
   pinned for both stores by `test_add_chunks_is_all_or_nothing`, so a failed batch writes nothing.
+
+## Embedder conventions
+
+- Callers depend on `EmbedderProtocol` (`rag_core.embed`), never on `FastembedEmbedder`. An
+  embedder's `info` is the `EmbedderInfo` a store is bound to, so bind stores with
+  `store.with_embedder(embedder.info)` and the vectors always land in that model's column.
+- Vectors are unit length, so cosine similarity equals the dot product. `HashingEmbedder` in
+  `rag_core_testing` keeps that property, and the contract suite in `test_embedder.py` pins it.
+- `FastembedEmbedder` loads lazily: building one checks the model id and dimension against
+  fastembed's built-in model list (no network) and loads nothing. The first embed call downloads
+  the files, if needed, and loads the model. fastembed's own `lazy_load=True` still downloads at
+  construction, so the deferral lives in `FastembedEmbedder.load`.
+- `embed_query` prepends `query_prefix`, and `embed_documents` embeds text as given. fastembed's
+  `query_embed` adds no instruction for the bge models, so the prefix is applied here.
+- The configured model comes from `Settings` (`EMBEDDING_MODEL`, `EMBEDDING_DIMENSION`,
+  `EMBEDDING_QUERY_PREFIX`), read through `FastembedEmbedder.from_settings`.
+
+## Dense search
+
+- `search_dense` ranks this store's model's vectors by cosine distance (pgvector's `<=>`). The SQL
+  is `ORDER BY <column> <=> query LIMIT n` with no second sort key, because a tie-breaking column
+  stops Postgres from using the HNSW index (checked with `EXPLAIN`). Equal distances therefore
+  have no defined order, and contract tests avoid ties.
+- `ef_search` is the only HNSW parameter retrieval varies. `m` and `ef_construction` are build-time
+  index options and stay at pgvector's defaults. The store sets `ef_search` with
+  `set_config('hnsw.ef_search', ..., true)`, local to the search's transaction. Postgres accepts
+  any value for that setting before pgvector is loaded in the session, so `check_search` enforces
+  the 1 to 1000 range and `ef_search >= limit` (HNSW returns at most `ef_search` rows).
+- Bind a query vector as `pgvector.Vector` or a numpy array. A plain Python list binds as
+  `double precision[]`, which has no `<=>` operator.
+- The DB search is approximate once the planner uses the index; `InMemoryStore` compares against
+  every chunk and is exact. Contract tests use corpora small enough that both return the same
+  ranking.
