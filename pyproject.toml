@@ -11,17 +11,19 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["packages/*", "cli"]
 
 # Workspace members are developed in-place; wire them in as editable sources.
 [tool.uv.sources]
 rag_core = { workspace = true }
 rag_core_testing = { workspace = true }
+study_cli = { workspace = true }
 
 [dependency-groups]
 dev = [
     "rag_core",
     "rag_core_testing",
+    "study_cli",
     "ruff>=0.6",
     "mypy>=1.11",
     "pytest>=8.0",
@@ -36,7 +38,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["packages/rag_core/src", "packages/rag_core_testing/src"]
+src = ["packages/rag_core/src", "packages/rag_core_testing/src", "cli/src"]
 
 [tool.ruff.lint]
 # D10x = docstring-presence rules (pydocstyle): every module, class, function, and __init__ must be
@@ -49,8 +51,14 @@ python_version = "3.12"
 strict = true
 # Resolve the src-layout packages from source so typechecking needs no install
 # (keeps pre-commit's isolated mypy env and CI consistent).
-mypy_path = ["packages/rag_core/src", "packages/rag_core_testing/src"]
-files = ["packages/rag_core/src", "packages/rag_core_testing/src", "packages/rag_core/tests"]
+mypy_path = ["packages/rag_core/src", "packages/rag_core_testing/src", "cli/src"]
+files = [
+    "packages/rag_core/src",
+    "packages/rag_core_testing/src",
+    "packages/rag_core/tests",
+    "cli/src",
+    "cli/tests",
+]
 explicit_package_bases = true
 namespace_packages = true
 
@@ -60,7 +68,7 @@ module = ["pgvector.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["packages"]
+testpaths = ["packages", "cli"]
 markers = [
     "integration: tests that need a live Postgres+pgvector instance (docker compose up -d) or download and load a real model",
     "unit: fast tests with no external services (auto-applied to every non-integration test)",

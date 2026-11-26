@@ -144,3 +144,11 @@
    :members:
    :show-inheritance:
 ```
+
+## study_cli.main
+
+```{eval-rst}
+.. automodule:: study_cli.main
+   :members:
+   :show-inheritance:
+```
