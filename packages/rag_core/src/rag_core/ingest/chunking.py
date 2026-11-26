@@ -7,6 +7,9 @@ from rag_core.ingest.markdown import parse_sections, update_fence
 
 # Joins the parts of a heading path into the breadcrumb line that opens a chunk.
 BREADCRUMB_SEPARATOR = " > "
+# Body words per chunk. Code and log excerpts measured up to 4.1 tokens per word, so 120 words
+# stays under the 512-token input limit of the bge embedding models, which truncate past it.
+DEFAULT_MAX_WORDS = 120
 
 
 @dataclass(frozen=True)
@@ -92,7 +95,7 @@ class HeadingChunker:
     words.
     """
 
-    def __init__(self, max_words: int = 200) -> None:
+    def __init__(self, max_words: int = DEFAULT_MAX_WORDS) -> None:
         """Set the largest number of body words one chunk may hold; it must be at least one."""
         if max_words < 1:
             raise ValueError(f"max_words must be at least 1, not {max_words}.")

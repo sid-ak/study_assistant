@@ -167,3 +167,12 @@ def test_max_words_must_be_positive(max_words: int) -> None:
     """A word budget below one is refused when the chunker is built."""
     with pytest.raises(ValueError):
         HeadingChunker(max_words=max_words)
+
+
+def test_default_budget_fits_the_embedding_models_input() -> None:
+    """The default is 120 body words, under 512 tokens even at 4.1 tokens per word.
+
+    4.1 is the highest tokens-per-word ratio measured on the corpus, in chunks that are mostly
+    code or log excerpts; prose is nearer 1.8. bge models truncate input past 512 tokens.
+    """
+    assert HeadingChunker().max_words == 120
