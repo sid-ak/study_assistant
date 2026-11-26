@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from rag_core.ingest.markdown import parse_sections
+
 # The keys a question table and an expected-section table may hold.
 QUESTION_KEYS = {"id", "text", "expected"}
 EXPECTED_KEYS = {"document", "section"}
@@ -126,3 +128,39 @@ def read_string(table: dict[str, Any], key: str, where: str) -> str:
     if not value.strip():
         raise GoldenSetError(f"{where} has an empty {key!r}.")
     return value
+
+
+def check_labels(questions: list[GoldenQuestion], folder: Path) -> None:
+    """Check that every label in ``questions`` can match a chunk ingested from ``folder``.
+
+    A label can match when its document exists under ``folder`` and the document has a heading,
+    outside code blocks, whose text equals the label's section. Raises ``GoldenSetError`` listing
+    every label that cannot.
+    """
+    problems: list[str] = []
+    for question in questions:
+        for expected in question.expected:
+            path = folder / expected.document
+            if not path.is_file():
+                problems.append(f"{question.id}: no document {expected.document!r}")
+                continue
+            headings = document_headings(path.read_text(encoding="utf-8"))
+            if expected.section not in headings:
+                problems.append(
+                    f"{question.id}: {expected.document!r} has no heading {expected.section!r}"
+                )
+    if problems:
+        raise GoldenSetError("Labels that no chunk can match:\n" + "\n".join(problems))
+
+
+def document_headings(markdown: str) -> set[str]:
+    """The text of every heading that starts a section with text in ``markdown``, or encloses one.
+
+    These are the headings that can appear in an ingested chunk's heading path. Headings inside
+    code blocks are not headings, so they never appear.
+    """
+    headings: set[str] = set()
+    for section in parse_sections(markdown):
+        for heading in section.headings:
+            headings.add(heading)
+    return headings

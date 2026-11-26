@@ -9,10 +9,11 @@ it are the local retrieval stack with an owned eval loop (0002, models in 0010) 
 
 ## Layout
 
-- `golden/`: the golden set, as TOML.
+- `golden/questions.toml`: the golden set, ten questions over `corpus/release_engineering/`.
 - `results/`: saved runs, one file per run, kept in git so runs can be compared across changes.
 - `src/evals/`: the harness.
-  - `golden.py`: the golden-set format and its loader.
+  - `golden.py`: the golden-set format, its loader, and `check_labels`, which confirms every
+    label names a heading that a chunk can carry.
 - `tests/`: unit tests, run by the root `pytest`.
 
 ## Conventions
@@ -23,5 +24,8 @@ it are the local retrieval stack with an owned eval loop (0002, models in 0010) 
   comes from the labeled document and lies inside the labeled section, so labels survive
   re-chunking and re-embedding. `document` is the path relative to the ingested folder
   (`corpus/release_engineering/`), as ingestion records it in each chunk's `source`.
-- The loader rejects anything it does not understand, including unknown keys, so a typo in a label
-  fails loudly instead of silently never matching.
+- The loader rejects anything it does not understand, including unknown keys, and a unit test runs
+  `check_labels` over the committed golden set and corpus. A typo in a label, or a corpus edit that
+  renames a heading, fails CI instead of silently never matching.
+- A question lists every section that answers it, so one answer spread over two documents, for example a
+  release note and a CI write-up, is two labels.

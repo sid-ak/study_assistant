@@ -4,7 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from evals.golden import ExpectedSection, GoldenQuestion, GoldenSetError, load_golden
+from evals.golden import (
+    ExpectedSection,
+    GoldenQuestion,
+    GoldenSetError,
+    check_labels,
+    load_golden,
+)
 
 TWO_QUESTIONS = """
 [[questions]]
@@ -156,3 +162,73 @@ def test_load_golden_rejects_invalid_toml(tmp_path: Path) -> None:
     """A file that is not valid TOML raises ``GoldenSetError`` rather than a parser error."""
     with pytest.raises(GoldenSetError):
         load_golden(write_golden(tmp_path, "[[questions]\nid = "))
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+COMMITTED_GOLDEN = REPO_ROOT / "evals" / "golden" / "questions.toml"
+COMMITTED_CORPUS = REPO_ROOT / "corpus" / "release_engineering"
+
+
+def question(question_id: str, document: str, section: str) -> GoldenQuestion:
+    """A golden question with one expected section."""
+    return GoldenQuestion(
+        id=question_id, text="Any question?", expected=(ExpectedSection(document, section),)
+    )
+
+
+@pytest.fixture
+def small_corpus(tmp_path: Path) -> Path:
+    """A folder with one document whose code block holds a line that looks like a heading."""
+    (tmp_path / "ci").mkdir()
+    (tmp_path / "ci" / "failure.md").write_text(
+        "# Failure\n\nIntro.\n\n## Fix\n\n```bash\n# Not a heading\nmake\n```\n"
+    )
+    return tmp_path
+
+
+def test_check_labels_accepts_headings_of_existing_documents(small_corpus: Path) -> None:
+    """Labels naming a document's top heading or a nested heading are both valid."""
+    check_labels(
+        [question("top", "ci/failure.md", "Failure"), question("fix", "ci/failure.md", "Fix")],
+        small_corpus,
+    )
+
+
+@pytest.mark.parametrize(
+    ("label", "named"),
+    [
+        (("missing", "ci/absent.md", "Fix"), "ci/absent.md"),
+        (("typo", "ci/failure.md", "Fixes"), "Fixes"),
+        (("fenced", "ci/failure.md", "Not a heading"), "Not a heading"),
+    ],
+    ids=["missing document", "missing heading", "heading inside a code block"],
+)
+def test_check_labels_rejects_a_label_nothing_can_match(
+    small_corpus: Path, label: tuple[str, str, str], named: str
+) -> None:
+    """A label whose document or heading does not exist raises ``GoldenSetError`` naming it."""
+    question_id, document, section = label
+    with pytest.raises(GoldenSetError, match=named):
+        check_labels([question(question_id, document, section)], small_corpus)
+
+
+def test_check_labels_reports_every_bad_label_at_once(small_corpus: Path) -> None:
+    """One error lists every bad label, so a broken golden set is fixed in one pass."""
+    with pytest.raises(GoldenSetError) as raised:
+        check_labels(
+            [
+                question("first", "ci/absent.md", "Fix"),
+                question("second", "ci/failure.md", "Fixes"),
+            ],
+            small_corpus,
+        )
+    assert "first" in str(raised.value)
+    assert "second" in str(raised.value)
+
+
+def test_committed_golden_set_labels_match_the_committed_corpus() -> None:
+    """Every label in the committed golden set names a heading of a committed corpus document."""
+    questions = load_golden(COMMITTED_GOLDEN)
+
+    check_labels(questions, COMMITTED_CORPUS)
+    assert len(questions) == 10
