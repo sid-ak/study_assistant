@@ -10,6 +10,10 @@ retrieval boundary (0001) and CLI batch ingestion (0004).
 - `study ingest <folder>`: prepares the schema, registers the configured embedding model (making
   it current if none is), and ingests every markdown file under the folder. Re-runs write only
   what changed.
+- `study query "<text>" [--limit N] [--ef-search N]`: prints the nearest chunks with their rank,
+  cosine distance, chunk id, and source with heading path, then the result count, the latency in
+  milliseconds, the model, and `ef_search`. The model is loaded with a warm-up query before the
+  timed search, so the latency covers embedding the query and searching, not model loading.
 
 ## Conventions
 

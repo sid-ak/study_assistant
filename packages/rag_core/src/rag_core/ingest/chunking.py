@@ -85,10 +85,11 @@ def split_blocks(text: str) -> list[str]:
 class HeadingChunker:
     """Chunker that keeps each chunk inside one markdown section.
 
-    Each chunk starts with a breadcrumb line, the section's heading path joined by `` > ``, so the
-    embedded text says where it sits in the document. A section that fits in ``max_words`` body
-    words is one chunk. A longer one is split at the largest boundary that fits: between
-    paragraphs or code blocks first, then between lines, then between words.
+    Each chunk starts with a breadcrumb line, the section's heading path joined by
+    ``BREADCRUMB_SEPARATOR``, so the embedded text says where it sits in the document. A section
+    that fits in ``max_words`` body words is one chunk. A longer one is split at the largest
+    boundary that fits: between paragraphs or code blocks first, then between lines, then between
+    words.
     """
 
     def __init__(self, max_words: int = 200) -> None:
