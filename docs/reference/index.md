@@ -49,6 +49,14 @@
    :show-inheritance:
 ```
 
+## rag_core.embed.registration
+
+```{eval-rst}
+.. automodule:: rag_core.embed.registration
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.retrieve.dense
 
 ```{eval-rst}

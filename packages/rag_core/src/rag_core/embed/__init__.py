@@ -6,5 +6,6 @@ is what a store is bound to, so vectors always land in the column of the model t
 
 from rag_core.embed.fastembed_embedder import FastembedEmbedder
 from rag_core.embed.protocol import EmbedderProtocol
+from rag_core.embed.registration import register_embedder
 
-__all__ = ["EmbedderProtocol", "FastembedEmbedder"]
+__all__ = ["EmbedderProtocol", "FastembedEmbedder", "register_embedder"]
