@@ -17,6 +17,22 @@
    :show-inheritance:
 ```
 
+## rag_core.ingest.markdown
+
+```{eval-rst}
+.. automodule:: rag_core.ingest.markdown
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.ingest.chunking
+
+```{eval-rst}
+.. automodule:: rag_core.ingest.chunking
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.store.protocol
 
 ```{eval-rst}
