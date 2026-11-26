@@ -152,3 +152,11 @@
    :members:
    :show-inheritance:
 ```
+
+## evals.golden
+
+```{eval-rst}
+.. automodule:: evals.golden
+   :members:
+   :show-inheritance:
+```
