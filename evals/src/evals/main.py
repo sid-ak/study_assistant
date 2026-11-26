@@ -85,8 +85,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Run ``study-eval`` with ``argv`` (default: the process arguments) and return its status.
 
-    Every input is checked before any retrieval runs: the run name, the golden set, and that each
-    label names a heading in the corpus.
+    Every input is checked before any retrieval runs: the run name, the golden set, that each
+    label names a heading in the corpus, and that the model has a vector for every stored chunk.
     """
     args = build_parser().parse_args(argv)
     try:
@@ -100,7 +100,15 @@ def main(argv: list[str] | None = None) -> int:
         return USAGE_ERROR
 
     components = build_components(Settings())
+    model_id = components.embedder.info.model_id
     try:
+        # A chunk without this model's vector can never be retrieved, so the run would score it as
+        # a miss. That means the model was registered but not embedded, not that retrieval failed.
+        if components.store.get_unembedded_chunks(limit=1):
+            raise ValueError(
+                f"Some stored chunks have no vector from {model_id}. "
+                "Run `study embed` with this model first."
+            )
         run = run_eval(
             questions,
             embedder=components.embedder,

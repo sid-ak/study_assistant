@@ -43,6 +43,7 @@ ingested corpus (`uv run study ingest corpus/release_engineering`).
   averaged over questions. MRR averages one over the rank of the first matching chunk. Latency is
   the p50 and p95, by nearest rank, over `repeats` timed retrievals per question, each covering
   query embedding and search. One untimed retrieval first absorbs the model load.
-- Inputs are checked before any retrieval: a taken run name, a malformed golden set, or a label
-  that names no heading exits with status 2.
+- Inputs are checked before any retrieval: a taken run name, a malformed golden set, a label that
+  names no heading, or a model with stored chunks it has no vector for exits with status 2. The
+  last would otherwise save a run that scores those chunks as misses.
 - Saved runs are never overwritten. A new measurement gets a new name.

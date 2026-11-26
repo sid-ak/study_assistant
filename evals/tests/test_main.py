@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from evals import main as eval_main
+from rag_core.store.embedders import EmbedderInfo
 from rag_core_testing import HashingEmbedder, InMemoryStore
 
 
@@ -93,3 +94,33 @@ def test_eval_refuses_a_run_name_already_saved(
     assert status == eval_main.USAGE_ERROR
     assert "smoke" in capsys.readouterr().err
     assert (results / "smoke.json").read_text() == before
+
+
+def test_eval_refuses_a_model_with_chunks_it_has_not_embedded(
+    monkeypatch: pytest.MonkeyPatch,
+    store: InMemoryStore,
+    golden_file: Path,
+    corpus: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A model missing vectors would score zero, so the run stops and points to ``study embed``."""
+    second_model = EmbedderInfo(model_id="test/hashing-embedder-second", dimension=32)
+    unembedded = eval_main.Components(
+        embedder=HashingEmbedder(second_model), store=store.with_embedder(second_model)
+    )
+
+    def build_unembedded(settings: object) -> eval_main.Components:
+        """Return components for a model the store holds no vectors from."""
+        return unembedded
+
+    monkeypatch.setattr(eval_main, "build_components", build_unembedded)
+    results = tmp_path / "results"
+
+    status = run_command("smoke", golden_file, corpus, results)
+
+    assert status == eval_main.USAGE_ERROR
+    error = capsys.readouterr().err
+    assert "test/hashing-embedder-second" in error
+    assert "study embed" in error
+    assert not (results / "smoke.json").exists()
