@@ -49,6 +49,14 @@
    :show-inheritance:
 ```
 
+## rag_core.retrieve.dense
+
+```{eval-rst}
+.. automodule:: rag_core.retrieve.dense
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.store.protocol
 
 ```{eval-rst}
