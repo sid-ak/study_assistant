@@ -237,3 +237,17 @@ def test_build_reranker_follows_the_setting() -> None:
     reranker = build_reranker(Settings(rerank_enabled=True))
     assert reranker is not None
     assert reranker.model_id == "jinaai/jina-reranker-v1-tiny-en"
+
+
+def test_candidates_counts_the_chunks_actually_reranked(hashing_store: StoreProtocol) -> None:
+    """A store holding fewer chunks than requested reports how many the reranker really scored."""
+    result = retrieve(
+        "asan",
+        embedder=HashingEmbedder(),
+        store=hashing_store,
+        limit=1,
+        reranker=ScriptedReranker({}),
+        candidates=20,
+    )
+
+    assert result.candidates == len(DOCUMENTS)
