@@ -17,6 +17,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "packages" / "rag_core" / "src"))
 sys.path.insert(0, str(REPO_ROOT / "cli" / "src"))
 sys.path.insert(0, str(REPO_ROOT / "evals" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "services" / "mcp_server" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "services" / "api" / "src"))
+
+# Import the MCP SDK while nothing else has been documented yet. Imported later, partway through the
+# autodoc run, one of its pydantic models (mcp_types.SubscriptionFilter) fails to build with
+# "The type annotation for `__pydantic_extra__` must be `dict[str, ...]`", which an import in a
+# plain interpreter does not reproduce. Importing it here first lets autodoc reuse the loaded
+# module.
+import mcp  # noqa: E402, F401
 
 project = "Study Assistant"
 author = "Sid Anandkumar"

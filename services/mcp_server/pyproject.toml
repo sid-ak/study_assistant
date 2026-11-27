@@ -1,0 +1,22 @@
+[project]
+name = "mcp_server"
+version = "0.0.0"
+description = "MCP server exposing rag_core retrieval as tools."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "rag_core",
+    "mcp>=1.20",
+]
+
+[project.scripts]
+study-mcp = "mcp_server.server:main"
+
+[tool.uv.sources]
+rag_core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_server"]

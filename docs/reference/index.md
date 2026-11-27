@@ -192,3 +192,11 @@
    :members:
    :show-inheritance:
 ```
+
+## mcp_server.server
+
+```{eval-rst}
+.. automodule:: mcp_server.server
+   :members:
+   :show-inheritance:
+```
