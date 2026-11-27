@@ -136,3 +136,17 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   can sit between them. With a reranker it searches `candidates` chunks and keeps the `limit` best.
   Each `RetrievedChunk.relevance` is the reranker's score, or the cosine similarity without one, and
   `RetrievalResult.rerank_latency_ms` times the reranking step alone.
+
+## Lexical search conventions
+
+- `StoreProtocol.search_lexical(query, limit)` matches chunks by words, not meaning. The database
+  store reads the generated `tsv` column (`to_tsvector('english', content)`, GIN-indexed) and turns
+  the query into an OR of its stemmed words, since `plainto_tsquery` alone ANDs every word and a
+  full question rarely matches. Results are ordered by `ts_rank`.
+- `ts_rank` approximates BM25: it weighs how often query words occur in a chunk, but uses no inverse
+  document frequency (rare words count no more than common ones) and, by default, ignores chunk
+  length. Postgres has no built-in BM25.
+- The fake counts shared words after dropping a list of stop words, without stemming. Contract tests
+  compare which chunks come back, not their order, because the two scorers rank differently.
+- Lexical search reads no embedding, so it works the same for a store bound to any model.
+
