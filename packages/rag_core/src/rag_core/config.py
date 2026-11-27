@@ -32,5 +32,8 @@ class Settings(BaseSettings):
     reranker_model: str = "jinaai/jina-reranker-v1-tiny-en"
     rerank_candidates: int = 20
 
+    # Hybrid retrieval: fuse lexical search with dense search by Reciprocal Rank Fusion.
+    hybrid_enabled: bool = False
+
 
 settings = Settings()

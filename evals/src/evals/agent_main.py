@@ -82,6 +82,7 @@ async def run_live(
             generation_model=generator.model,
             reranker=reranker,
             candidates=candidates,
+            hybrid=retrieval.hybrid_enabled,
         )
 
 
@@ -111,8 +112,10 @@ def print_agent_run(run: AgentEvalRun) -> None:
         f"latency p50 {run.latency_p50_ms:.0f} ms, p95 {run.latency_p95_ms:.0f} ms"
     )
     reranked = ""
+    if run.hybrid:
+        reranked += ", hybrid search"
     if run.reranker is not None:
-        reranked = f", search reranked by {run.reranker} from {run.candidates} candidates"
+        reranked += f", search reranked by {run.reranker} from {run.candidates} candidates"
     print(f"({run.generation_model}{reranked})")
 
 

@@ -29,6 +29,8 @@ class Components:
     # The configured reranker, or None when RERANK_ENABLED is off, and its candidate count.
     reranker: RerankerProtocol | None = None
     rerank_candidates: int = 20
+    # Whether lexical search is fused with dense search (HYBRID_ENABLED).
+    hybrid: bool = False
 
 
 def build_components(settings: Settings) -> Components:
@@ -44,6 +46,7 @@ def build_components(settings: Settings) -> Components:
         store=store,
         reranker=build_reranker(settings),
         rerank_candidates=settings.rerank_candidates,
+        hybrid=settings.hybrid_enabled,
     )
 
 
@@ -148,6 +151,7 @@ def main(argv: list[str] | None = None) -> int:
             repeats=args.repeats,
             reranker=components.reranker,
             candidates=components.rerank_candidates,
+            hybrid=components.hybrid,
         )
     except (ValueError, EmbedderNotFoundError) as error:
         print(error, file=sys.stderr)
@@ -169,8 +173,10 @@ def print_run(run: EvalRun) -> None:
         f"latency p50 {run.latency_p50_ms:.1f} ms, p95 {run.latency_p95_ms:.1f} ms"
     )
     reranked = ""
+    if run.hybrid:
+        reranked += ", hybrid with lexical search"
     if run.reranker is not None:
-        reranked = f", reranked by {run.reranker} from {run.candidates} candidates"
+        reranked += f", reranked by {run.reranker} from {run.candidates} candidates"
     print(
         f"({run.model_id}, {len(run.questions)} questions x {run.repeats} repeats, "
         f"ef_search {ef_search}{reranked})"

@@ -261,12 +261,15 @@ def test_an_agent_run_records_how_retrieval_ranked() -> None:
             generation_model="test/model",
             reranker="jinaai/jina-reranker-v1-tiny-en",
             candidates=20,
+            hybrid=True,
         )
     )
     dense = score([question("good")], agent)
 
     assert reranked.reranker == "jinaai/jina-reranker-v1-tiny-en"
     assert reranked.candidates == 20
+    assert reranked.hybrid is True
+    assert dense.hybrid is False
     assert dense.reranker is None
     assert dense.candidates is None
 

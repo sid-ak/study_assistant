@@ -50,8 +50,12 @@ def test_search_returns_typed_hits_nearest_first(server: MCPServer) -> None:
     assert hits[0].document == "build.md"
     assert hits[0].section == "Build > Caching"
     assert "ccache stores compiled objects." in hits[0].content
-    assert hits[0].distance <= hits[1].distance
-    assert hits[0].relevance == pytest.approx(1.0 - hits[0].distance)
+    first_distance = hits[0].distance
+    second_distance = hits[1].distance
+    # Dense hits always carry a distance.
+    assert first_distance is not None and second_distance is not None
+    assert first_distance <= second_distance
+    assert hits[0].relevance == pytest.approx(1.0 - first_distance)
     assert len(hits[0].id) == 36
 
 
@@ -89,6 +93,7 @@ def test_server_environment_passes_only_what_the_server_needs() -> None:
         "RERANK_ENABLED": "true",
         "RERANKER_MODEL": "jinaai/jina-reranker-v1-tiny-en",
         "RERANK_CANDIDATES": "30",
+        "HYBRID_ENABLED": "true",
         "GENERATION_API_KEY": "sk-secret",
         "UNRELATED": "x",
     }
@@ -102,6 +107,7 @@ def test_server_environment_passes_only_what_the_server_needs() -> None:
     assert environment["RERANK_ENABLED"] == "true"
     assert environment["RERANKER_MODEL"] == "jinaai/jina-reranker-v1-tiny-en"
     assert environment["RERANK_CANDIDATES"] == "30"
+    assert environment["HYBRID_ENABLED"] == "true"
 
     assert environment["DATABASE_URL"] == "postgresql://db"
     assert environment["EMBEDDING_MODEL"] == "BAAI/bge-base-en-v1.5"

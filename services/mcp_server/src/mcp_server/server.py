@@ -35,7 +35,8 @@ class SearchHit(TypedDict):
     document: str
     section: str
     content: str
-    distance: float
+    # None for a chunk only lexical search found in hybrid mode.
+    distance: float | None
     relevance: float
 
 
@@ -48,18 +49,21 @@ class SearchTool:
         store: StoreProtocol,
         reranker: RerankerProtocol | None = None,
         candidates: int = DEFAULT_CANDIDATES,
+        hybrid: bool = False,
     ) -> None:
         """Search ``store`` with ``embedder``; with a ``reranker``, rescore ``candidates`` hits."""
         self.embedder = embedder
         self.store = store
         self.reranker = reranker
         self.candidates = candidates
+        self.hybrid = hybrid
 
     def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[SearchHit]:
         """Return the stored chunks most relevant to ``query``, most relevant first.
 
         Each hit has the chunk's id, its source document, its heading path, its text, its cosine
-        distance to the query (0 is identical, 2 is opposite), and its relevance: the reranker's
+        distance to the query (0 is identical, 2 is opposite; null for a chunk only lexical
+        search found), and its relevance: the reranker's
         score from 0 to 1 when the server reranks, otherwise the cosine similarity, 1 minus the
         distance. Hits are ordered by relevance. ``limit`` is 1 to 20.
         """
@@ -76,6 +80,7 @@ class SearchTool:
             limit=limit,
             reranker=self.reranker,
             candidates=self.candidates,
+            hybrid=self.hybrid,
         )
         return [hit_from_chunk(chunk) for chunk in result.chunks]
 
@@ -98,13 +103,15 @@ def build_server(
     store: StoreProtocol,
     reranker: RerankerProtocol | None = None,
     candidates: int = DEFAULT_CANDIDATES,
+    hybrid: bool = False,
 ) -> MCPServer:
     """An MCP server offering the ``search`` tool over ``embedder`` and ``store``.
 
-    With a ``reranker``, every search reranks ``candidates`` dense results.
+    With a ``reranker``, every search reranks ``candidates`` results. With ``hybrid``, lexical
+    search is fused with dense search first.
     """
     server = MCPServer(SERVER_NAME)
-    tool = SearchTool(embedder, store, reranker, candidates)
+    tool = SearchTool(embedder, store, reranker, candidates, hybrid)
     # The tool's name, description, and argument schema come from the method's signature and
     # docstring.
     server.add_tool(tool.search, name="search")
@@ -129,6 +136,7 @@ def main() -> None:
         store=store,
         reranker=reranker,
         candidates=settings.rerank_candidates,
+        hybrid=settings.hybrid_enabled,
     )
     # stdio: the client starts this process and speaks MCP over its standard input and output.
     server.run("stdio")

@@ -49,13 +49,21 @@ without reprocessing what's already stored.
 
 ### Retrieval
 
-Retrieval is the heart of the system and lives entirely in `rag_core`. A query runs hybrid search —
-dense vector similarity against pgvector plus BM25 lexical search — fused with RRF, then a
-`jina-reranker-v1-tiny-en` cross-encoder re-scores the top candidates into the final top-k. The reranker
+Retrieval is the heart of the system and lives entirely in `rag_core`. A query runs dense vector
+similarity against pgvector and, with hybrid search on, Postgres full-text search beside it, the two
+ranked lists fused with Reciprocal Rank Fusion (RRF). A `jina-reranker-v1-tiny-en` cross-encoder
+then re-scores the top candidates into the final top-k. The reranker
 is the single highest-leverage quality lever, reading query and document together to catch relevance
 that bi-encoder embeddings miss. Retrieval quality is validated by an eval loop: a golden-set
 harness (labeled query → expected document) introduced in the embeddings phase, which both guards
 against regressions and demonstrates that reranking measurably improves results.
+
+Full-text search ranks matches with Postgres's `ts_rank`, an approximation of BM25, the standard
+lexical ranking function. Both score a chunk higher the more often it contains the query's words,
+but `ts_rank` uses no inverse document frequency, so a rare word such as an error code counts no
+more than a common one, and by default it ignores chunk length. RRF uses only each list's ranks, so
+the difference matters only where it changes an order. A true BM25 extension (`pg_bm25`) is adopted
+only if the eval harness shows a gap that `ts_rank` causes.
 
 ### Generation
 
@@ -112,7 +120,7 @@ study_assistant/
 │       │   ├── ingest/          # pptx/pdf/md parsing, semantic chunking
 │       │   ├── embed/           # fastembed embedder (lazy model load)
 │       │   ├── rerank/          # fastembed cross-encoder reranker
-│       │   ├── retrieve/        # dense + BM25 + RRF fusion
+│       │   ├── retrieve/        # dense + lexical (ts_rank) + RRF fusion + rerank
 │       │   ├── store/           # pgvector access, schema, migrations
 │       │   └── config.py
 │       └── tests/

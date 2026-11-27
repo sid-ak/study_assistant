@@ -22,11 +22,14 @@ RUN_NAME_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
 
 @dataclass(frozen=True)
 class RetrievedSection:
-    """One retrieved chunk, named by its document and heading path, with its distance."""
+    """One retrieved chunk, by document and heading path, with its distance and relevance.
+
+    ``distance`` is ``None`` for a chunk only lexical search found.
+    """
 
     document: str
     section: str
-    distance: float
+    distance: float | None
 
 
 @dataclass(frozen=True)
@@ -57,6 +60,8 @@ class EvalRun:
     # The reranker's model and its candidate count, or None for both in a dense-only run.
     reranker: str | None
     candidates: int | None
+    # Whether lexical search was fused with dense search.
+    hybrid: bool
     recall_at_k: float
     mrr: float
     latency_p50_ms: float
@@ -74,6 +79,7 @@ class RetrievalSettings:
     ef_search: int | None
     reranker: RerankerProtocol | None
     candidates: int
+    hybrid: bool
 
 
 def retrieve_once(text: str, settings: RetrievalSettings) -> RetrievalResult:
@@ -86,6 +92,7 @@ def retrieve_once(text: str, settings: RetrievalSettings) -> RetrievalResult:
         ef_search=settings.ef_search,
         reranker=settings.reranker,
         candidates=settings.candidates,
+        hybrid=settings.hybrid,
     )
 
 
@@ -99,6 +106,7 @@ def run_eval(
     repeats: int = 1,
     reranker: RerankerProtocol | None = None,
     candidates: int = 20,
+    hybrid: bool = False,
 ) -> EvalRun:
     """Retrieve the top ``k`` chunks for each question and score them against its labels.
 
@@ -123,6 +131,7 @@ def run_eval(
         ef_search=ef_search,
         reranker=reranker,
         candidates=candidates,
+        hybrid=hybrid,
     )
 
     # Untimed warm-up: an embedder or reranker that loads its model on first use does it here. It
@@ -173,6 +182,7 @@ def run_eval(
         repeats=repeats,
         reranker=None if reranker is None else reranker.model_id,
         candidates=warm_up.candidates,
+        hybrid=hybrid,
         recall_at_k=total_recall / len(results),
         mrr=total_reciprocal_rank / len(results),
         latency_p50_ms=percentile(all_latencies, 50),

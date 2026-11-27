@@ -133,3 +133,21 @@ def test_without_a_reranker_relevance_is_the_cosine_similarity(store: InMemorySt
 
     for hit in result.structured_content["result"]:
         assert hit["relevance"] == pytest.approx(1.0 - hit["distance"])
+
+
+def test_a_hybrid_server_fuses_dense_and_lexical_results(store: InMemoryStore) -> None:
+    """With hybrid on and no reranker, relevance is the fused reciprocal-rank score."""
+
+    async def search_hybrid() -> Any:
+        """Search through a server built with hybrid retrieval."""
+        server = build_server(embedder=HashingEmbedder(), store=store, hybrid=True)
+        async with Client(server) as client:
+            return await client.call_tool(
+                "search", {"query": "ccache compiled objects", "limit": 2}
+            )
+
+    hits = asyncio.run(search_hybrid()).structured_content["result"]
+
+    # First in both lists: 1/61 + 1/61. No cosine similarity is this small for a matching chunk.
+    assert hits[0]["document"] == "build.md"
+    assert hits[0]["relevance"] == pytest.approx(2 / 61)

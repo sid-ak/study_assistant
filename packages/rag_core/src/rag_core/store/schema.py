@@ -62,7 +62,9 @@ CREATE TABLE IF NOT EXISTS embedding_models (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_embedding_models_current
 ON embedding_models (is_current) WHERE is_current;
 
--- GIN index for full-text search (BM25)
+-- GIN index over each chunk's stemmed words, for lexical search ranked by ts_rank, an approximation
+-- of BM25: it weighs how often query words occur but uses no inverse document frequency, and by
+-- default ignores document length.
 CREATE INDEX IF NOT EXISTS idx_chunks_tsv ON chunks USING gin(tsv);
 
 -- Per-document lookup in insertion order, and fast cleanup on document delete

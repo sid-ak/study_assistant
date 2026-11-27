@@ -612,6 +612,93 @@ def test_set_embeddings_is_all_or_nothing(
     assert unembedded_pairs(store_b) == [(ids[0], "first"), (ids[1], "second")]
 
 
+LEXICAL_TEXTS = [
+    "Orbit 5.0 rejects requests over the in-flight limit with error E1050.",
+    "Bazel: bazel test --config=asan runs every test under AddressSanitizer.",
+    "CMake presets name a complete configuration for every developer.",
+]
+
+
+def lexical_contents(store: StoreProtocol, query: str, limit: int = 10) -> set[str]:
+    """The content of every chunk ``search_lexical`` returns for ``query``, as a set.
+
+    The fake's scorer and the database's ``ts_rank`` order matches differently, so the contract
+    is which chunks come back, not their order.
+    """
+    contents = set()
+    for row in store.search_lexical(query, limit=limit):
+        contents.add(row["content"])
+    return contents
+
+
+def test_search_lexical_finds_chunks_sharing_the_query_words(store: StoreProtocol) -> None:
+    """A chunk containing a query word is returned; a chunk containing none is not."""
+    store_contents(store, LEXICAL_TEXTS)
+
+    assert lexical_contents(store, "What does error E1050 mean?") == {LEXICAL_TEXTS[0]}
+
+
+def test_search_lexical_matches_an_exact_identifier(store: StoreProtocol) -> None:
+    """A code or flag the embedding model blurs is matched exactly, whatever its case."""
+    store_contents(store, LEXICAL_TEXTS)
+
+    assert lexical_contents(store, "e1050") == {LEXICAL_TEXTS[0]}
+    assert lexical_contents(store, "asan") == {LEXICAL_TEXTS[1]}
+
+
+def test_search_lexical_matches_any_query_word(store: StoreProtocol) -> None:
+    """A long question matches chunks that contain only some of its words."""
+    store_contents(store, LEXICAL_TEXTS)
+
+    found = lexical_contents(store, "Which bazel flag enables cmake presets?")
+
+    assert found == {LEXICAL_TEXTS[1], LEXICAL_TEXTS[2]}
+
+
+def test_search_lexical_returns_the_chunk_fields_and_a_score(store: StoreProtocol) -> None:
+    """Each result carries the chunk's id, document, content, metadata, and a positive score."""
+    [chunk_id] = store_contents(store, LEXICAL_TEXTS[:1])
+
+    [row] = store.search_lexical("E1050", limit=5)
+
+    assert row["id"] == chunk_id
+    assert row["content"] == LEXICAL_TEXTS[0]
+    assert "document_id" in row
+    assert "metadata" in row
+    assert row["score"] > 0
+
+
+def test_search_lexical_returns_at_most_limit(store: StoreProtocol) -> None:
+    """``limit`` caps the number of results."""
+    store_contents(store, LEXICAL_TEXTS)
+
+    assert len(store.search_lexical("orbit bazel cmake", limit=2)) == 2
+
+
+@pytest.mark.parametrize("query", ["zebra quantum", "the of and", "   "])
+def test_search_lexical_returns_nothing_without_a_usable_word(
+    store: StoreProtocol, query: str
+) -> None:
+    """No match, a query of only common stop words, or a blank query returns no chunks."""
+    store_contents(store, LEXICAL_TEXTS)
+
+    assert store.search_lexical(query, limit=5) == []
+
+
+def test_search_lexical_needs_no_embedding(store: StoreProtocol, store_b: StoreProtocol) -> None:
+    """Lexical search reads the text, so a store bound to another model finds the same chunks."""
+    store_contents(store, LEXICAL_TEXTS)
+
+    assert lexical_contents(store_b, "E1050") == {LEXICAL_TEXTS[0]}
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_search_lexical_rejects_a_limit_below_one(store: StoreProtocol, limit: int) -> None:
+    """A limit below one is an error, not an empty list."""
+    with pytest.raises(ValueError):
+        store.search_lexical("E1050", limit=limit)
+
+
 def test_both_implementations_conform_to_protocol() -> None:
     """Both Store and InMemoryStore satisfy StoreProtocol, structurally and at runtime."""
     # mypy --strict checks these assignments; the concrete Store constructs without connecting.

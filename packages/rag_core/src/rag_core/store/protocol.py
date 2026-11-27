@@ -114,6 +114,18 @@ class StoreProtocol(Protocol):
         """
         ...
 
+    def search_lexical(self, query: str, limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks containing words of ``query``, best match first.
+
+        Matching is by words, not meaning: a chunk is a match when it contains at least one of the
+        query's words, after both are reduced to their stems and common words such as "the" are
+        dropped. Each result holds the chunk's ``id``, ``document_id``, ``content``, and a copy of
+        its ``metadata``, plus a positive ``score`` that orders the matches. It reads no embedding,
+        so any store finds the same chunks whatever model it is bound to. A query with no usable
+        word returns ``[]``. Raises ``ValueError`` if ``limit`` is below one.
+        """
+        ...
+
     def search_dense(
         self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None
     ) -> list[dict[str, Any]]:

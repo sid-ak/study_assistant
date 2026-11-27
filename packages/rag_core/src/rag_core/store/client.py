@@ -196,6 +196,24 @@ class Store:
                 if cursor.rowcount == 0:
                     raise MissingChunkError(f"No stored chunk has id {row['id']}.")
 
+    def search_lexical(self, query: str, limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks containing words of ``query``, best ``ts_rank`` first.
+
+        ``plainto_tsquery`` stems the query and drops stop words, joining the rest with AND, which a
+        full question rarely satisfies. Replacing each ``&`` with ``|`` makes it match any of the
+        words; ``ts_rank`` then scores chunks that contain more of them, more often, higher. The
+        ``tsv`` column and its GIN index hold each chunk's stemmed words.
+        """
+        check_limit(limit)
+        query_sql = (
+            "SELECT id, document_id, content, metadata, ts_rank(tsv, q) AS score "
+            "FROM chunks, "
+            "CAST(replace(plainto_tsquery('english', %(query)s)::text, ' & ', ' | ') AS tsquery) q "
+            "WHERE tsv @@ q ORDER BY score DESC LIMIT %(limit)s"
+        )
+        with self.get_connection() as conn:
+            return conn.execute(query_sql, {"query": query, "limit": limit}).fetchall()
+
     def search_dense(
         self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None
     ) -> list[dict[str, Any]]:

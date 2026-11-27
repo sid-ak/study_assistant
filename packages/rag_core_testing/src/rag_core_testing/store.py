@@ -23,6 +23,7 @@ from rag_core.store.validation import (
     check_search,
     check_unique_ids,
 )
+from rag_core_testing.embedding import WORD_PATTERN
 
 
 def cosine_distance(a: Sequence[float], b: Sequence[float]) -> float:
@@ -35,6 +36,62 @@ def cosine_distance(a: Sequence[float], b: Sequence[float]) -> float:
         a_squares += x * x
         b_squares += y * y
     return 1.0 - dot / math.sqrt(a_squares * b_squares)
+
+
+# Common English words dropped from lexical queries, as the database's English text-search
+# configuration drops them, so a query of only these matches nothing in either store.
+STOP_WORDS = {
+    "a",
+    "about",
+    "an",
+    "and",
+    "any",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "can",
+    "do",
+    "does",
+    "for",
+    "from",
+    "how",
+    "i",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "its",
+    "of",
+    "on",
+    "or",
+    "so",
+    "that",
+    "the",
+    "their",
+    "them",
+    "then",
+    "there",
+    "these",
+    "they",
+    "this",
+    "those",
+    "to",
+    "was",
+    "we",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "who",
+    "why",
+    "will",
+    "with",
+    "you",
+}
 
 
 class InMemoryStore:
@@ -177,6 +234,39 @@ class InMemoryStore:
                 raise MissingChunkError(f"No stored chunk has id {row['id']}.")
         for row in embeddings:
             self.chunks[row["id"]]["embeddings"][self.embedder.model_id] = list(row["embedding"])
+
+    def search_lexical(self, query: str, limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks containing words of ``query``, best match first.
+
+        The score is how many of the query's distinct words, minus common stop words, a chunk
+        contains. It does not stem words as the database does, so tests choose words that match
+        exactly, and they compare which chunks come back rather than their order.
+        """
+        check_limit(limit)
+        query_words = set()
+        for word in WORD_PATTERN.findall(query.lower()):
+            if word not in STOP_WORDS:
+                query_words.add(word)
+        scored: list[tuple[int, int, dict[str, Any]]] = []
+        for position, chunk in enumerate(self.chunks.values()):
+            chunk_words = set(WORD_PATTERN.findall(chunk["content"].lower()))
+            shared = len(query_words & chunk_words)
+            if shared > 0:
+                scored.append((-shared, position, chunk))
+        # The position is unique, so it breaks ties before two chunk dicts would be compared.
+        scored.sort()
+        results: list[dict[str, Any]] = []
+        for negative_shared, _, chunk in scored[:limit]:
+            results.append(
+                {
+                    "id": chunk["id"],
+                    "document_id": chunk["document_id"],
+                    "content": chunk["content"],
+                    "metadata": copy.deepcopy(chunk["metadata"]),
+                    "score": float(-negative_shared),
+                }
+            )
+        return results
 
     def search_dense(
         self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None
