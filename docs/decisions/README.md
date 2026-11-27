@@ -21,3 +21,4 @@ phased build plan is tracked as
 | [0009](0009-mvp-corpus.md)                    | MVP corpus: release-engineering markdown                    | Accepted |
 | [0010](0010-lightweight-embedding-and-reranking-models.md) | Lightweight embedding and reranking models on fastembed | Accepted |
 | [0011](0011-free-hosted-generation.md)        | Free hosted generation endpoint (Groq) for the MVP          | Accepted |
+| [0012](0012-bounded-agent-over-mcp.md)        | Bounded agent over MCP: a fixed state machine with cited output | Accepted |

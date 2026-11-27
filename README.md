@@ -28,7 +28,7 @@ Chunk 1 (#46) adds ingestion and dense retrieval:
 - The MVP corpus is an original set of release-engineering documents in
   `corpus/release_engineering/` (ADR 0009).
 
-Chunk 2 (#47), the golden-set evaluation harness, is in progress in `evals/`. Ten golden
+Chunk 2 (#47) adds the golden-set evaluation harness in `evals/`. Ten golden
 questions are labeled by document and section heading rather than by chunk, so labels survive
 re-chunking. `study-eval <name>` scores them against the ingested corpus, reporting Recall@5, MRR,
 and p50 and p95 latency, and saves the run in `evals/results/`. The dense baseline with
@@ -36,6 +36,19 @@ and p50 and p95 latency, and saves the run in `evals/results/`. The dense baseli
 questions whose answer spans two documents find only one of their sections. `study embed` fills a
 newly registered model's column for the chunks already stored, and with it `bge-base-en-v1.5`
 measured the same Recall@5 at 16 ms more median latency, so `bge-small-en-v1.5` stays the default.
+
+Chunk 3 (#48) adds the generation lane:
+
+- `services/mcp_server` exposes retrieval as one MCP `search` tool. The agent in `services/api`
+  reaches retrieval only through it, and a test fails if the agent's code imports `rag_core`.
+- The agent is a fixed state machine (ADR 0012): search, grade the top hit's similarity against a
+  threshold, then answer, or rewrite the query and search once more, or stop with "insufficient
+  context". It makes at most two searches and two model requests per question.
+- Answers come from Groq's free plan (ADR 0011) as strict JSON with the cited chunk ids, limited to
+  the chunks the model was shown. `study-ask "<question>"` prints the answer and its sources.
+- `study-eval-agent <name>` checks citations over the golden set: all ten answered, all grounded,
+  with citation recall 0.90.
+
 Later phases add the MCP server, the FastAPI backend, and the React frontend.
 
 ## Prerequisites
@@ -65,6 +78,14 @@ Score retrieval on the golden set and save the run as `evals/results/<name>.json
 
 ```sh
 uv run study-eval my-run
+```
+
+Ask the agent a question. It needs `GENERATION_API_KEY` in `.env` (a free Groq key), and it starts
+the MCP server itself:
+
+```sh
+uv run study-ask "Which Bazel flag runs every test under AddressSanitizer?"
+uv run study-eval-agent my-agent-run
 ```
 
 Verify pgvector is live:
