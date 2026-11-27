@@ -16,6 +16,12 @@ Latency covers embedding the query and the database search, on an Apple M1 with 
 Postgres in Docker. It varies by several milliseconds between runs of the same configuration, so
 small latency differences between runs are noise.
 
+Reproduced on 2026-11-27 from a fresh clone with an empty database, following the README: the
+default configuration (dense, reranked) scored the same Recall@5 of 0.95 and MRR of 0.83, at a p50
+of 267 ms, and the agent scored the same grounding of 1.00 and citation recall of 0.95 over all ten
+questions. Those two runs were not saved here, because they repeat `dense-bge-small-rerank` and
+`agent-qwen3.8-27b-rerank` rather than record a new configuration.
+
 ## Dense baseline
 
 `dense-bge-small` is dense retrieval with the default embedder and the HNSW index's default

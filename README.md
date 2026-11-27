@@ -12,10 +12,24 @@ hosted model, and a local runtime works through the same adapter.
 
 ## Status
 
-Phase 1 — Storage + Schema is complete. Phase 1.5 — MVP (issue #45) is in progress: a thin
-end-to-end slice from ingestion to a cited answer, built in seven chunks. Its models are settled:
-`fastembed` runs the embedder and reranker locally (ADR 0010), and generation uses Groq's free
-plan (ADR 0011).
+Phase 1 — Storage + Schema and Phase 1.5 — MVP (issue #45) are complete: a thin end-to-end slice
+from ingestion to a cited answer a person approved, built in seven chunks and measured at each step.
+Its models are settled: `fastembed` runs the embedder and reranker locally (ADR 0010), and
+generation uses Groq's free plan (ADR 0011).
+
+[`docs/walkthrough.md`](docs/walkthrough.md) is the MVP end to end with its measured results, and
+the chunk summaries below say what each step added.
+
+Measured over ten golden questions on the 17-document corpus, reproduced from a fresh clone:
+
+| | Recall@5 | MRR | p50 | p95 |
+| --- | --- | --- | --- | --- |
+| Dense | 0.90 | 0.88 | 26 ms | 42 ms |
+| Dense, reranked (the default) | 0.95 | 0.83 | 283 ms | 418 ms |
+| Hybrid, reranked | 0.95 | 0.83 | 330 ms | 451 ms |
+
+The agent answers all ten, cites only chunks it was shown (grounding 1.00), and reaches citation
+recall 0.95 with reranking, at a median of about 1 s per question.
 
 Chunk 1 (#46) adds ingestion and dense retrieval:
 
@@ -65,12 +79,20 @@ a thread id. The paused run is saved in Postgres, so the decision can come later
 process: `study-ask --resume <thread-id> --approve` answers from those sources, and `--reject`
 spends the next hop on a rewritten query and stops at the same checkpoint again.
 
+Chunk 7 (#50) is the code freeze: a fresh clone was taken through this README, the docs were checked
+against the code, and the walkthrough was written. What is known to be missing is listed at the end
+of [the walkthrough](docs/walkthrough.md).
+
 Later phases add the FastAPI backend and the React frontend.
 
 ## Prerequisites
 
 - [`uv`](https://docs.astral.sh/uv/) — `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- Docker (Docker Desktop on macOS) for Postgres + pgvector
+- Docker for Postgres + pgvector (Docker Desktop or Colima on macOS). `docker compose up -d`
+  bind-mounts `infra/postgres/init.sql`, so the clone has to sit in a folder the Docker runtime
+  shares with its virtual machine — under your home directory with Colima's defaults. Outside it,
+  the mount becomes an empty directory, the test database is never created, and every integration
+  test fails to connect.
 - [`pre-commit`](https://pre-commit.com/) — `uv tool install pre-commit`
 
 ## Quickstart
@@ -83,14 +105,17 @@ docker compose up -d          # start Postgres with the vector extension
 uv run pytest                 # run the test suite
 ```
 
-Ingest the MVP corpus and search it. The first run downloads the 64 MB embedding model.
+Ingest the MVP corpus and search it. The first ingestion downloads the 63 MB embedding model, and
+the first search downloads the 126 MB reranker, which is on by default.
 
 ```sh
 uv run study ingest corpus/release_engineering
 uv run study query "Which Bazel flag turns on AddressSanitizer?"
 ```
 
-Score retrieval on the golden set and save the run as `evals/results/<name>.json`:
+Score retrieval on the golden set and save the run as `evals/results/<name>.json`. The saved runs
+and what each one shows are described in
+[`evals/results/README.md`](evals/results/README.md):
 
 ```sh
 uv run study-eval my-run

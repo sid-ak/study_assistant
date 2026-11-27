@@ -9,6 +9,7 @@
 :caption: Project
 
 architecture.md
+walkthrough.md
 ```
 
 ```{toctree}

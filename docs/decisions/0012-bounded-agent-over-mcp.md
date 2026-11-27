@@ -1,6 +1,6 @@
 # 12. Bounded Agent over MCP
 
-- Status: Accepted
+- Status: Accepted, extended by the amendment below (the approval checkpoint)
 - Date: 2026-11-26
 
 ## Context
@@ -78,3 +78,45 @@ retrieve -> grade_relevance -> generate                      (relevant)
 - One rewrite is the only recovery from a poor first search. A question whose answer retrieval does
   not return in the top five cannot be fully answered, which the citation-recall misses on the two
   multi-document golden questions show.
+
+## Amendment, 2026-11-27: the approval checkpoint
+
+The record above said a later stage could pause a run "without changing the graph", because the
+graph already compiled with an optional checkpointer. That turned out to be half right: the
+checkpointer needed no change, but the pause itself is a step, so the graph gained one.
+
+```text
+retrieve -> grade_relevance -> review_sources -> generate    (relevant, approved)
+                            -> rewrite_query -> retrieve     (not relevant, hops left)
+                            -> insufficient_context          (nothing left to try)
+
+review_sources -> rewrite_query -> retrieve                  (rejected, hops left)
+               -> insufficient_context                       (rejected, no hops left)
+```
+
+- One graph, one setting. `review_sources` is always in the graph. With `require_approval` it calls
+  LangGraph's `interrupt` with the retrieved sources and the run stops there; without it the step
+  approves them itself, so the one-shot path keeps its behavior and gains a pass-through node. A
+  second graph shape built only for approval was rejected: one state machine is easier to reason
+  about and to test.
+- The pause sits after the relevance grade and before the answer. That is the last point where a
+  decision can still change the outcome without the answer having been paid for. Irrelevant context
+  never reaches the checkpoint, because there is nothing to approve and the graph already rewrites.
+- A rejection costs a hop. It routes to `rewrite_query` while hops remain and to
+  `insufficient_context` otherwise, so the bound on searches bounds rejections too and a person
+  cannot extend a run indefinitely.
+- Paused runs are saved by LangGraph's Postgres checkpointer in the `DATABASE_URL` database, in its
+  own tables. This is not a retrieval path: the corpus is still read only through the MCP search
+  tool, as [ADR 0001](0001-rag-retrieval-boundary.md) requires, and a test fails on any `rag_core`
+  import in the generation lane.
+- What a pause carries is plain data (the question, the query, the hop, and each source's id,
+  document, section, and relevance), because the process that resumes a run may have none of the
+  lane's classes loaded. The saver's serializer is told about the types the state carries, since an
+  unlisted type is restored as a plain dictionary rather than refused.
+- Before the API exists, the checkpoint is driven from the command line: `study-ask --review`
+  prints the pending sources and a thread id, and `study-ask --resume <thread-id> --approve` or
+  `--reject` carries the decision. The HTTP surface stays in Phase 7.
+
+Consequences: a run's latency is now a person's when approval is required, and each run writes one
+saved state per step. Nothing else about the agent's cost changes, since the checkpoint adds no
+search and no model request.

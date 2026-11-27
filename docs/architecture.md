@@ -107,6 +107,10 @@ coder or coding agent in the future.
 
 ## Directory
 
+The tree below is the target layout for the whole system. What is built today is the retrieval
+library, the ingestion CLI, the MCP server, the generation lane with its command-line entry points,
+and the evaluation harness; the entries marked "later phase" do not exist yet.
+
 ```text
 study_assistant/
 ├── AGENTS.md                    # canonical agent context — entry point, project one-liner
@@ -117,20 +121,30 @@ study_assistant/
 ├── uv.lock
 ├── docker-compose.yaml
 ├── .pre-commit-config.yaml
-├── .github/workflows/ci.yaml
+├── CHEATSHEET.md                # commands, settings, and exit statuses at a glance
+├── conftest.py                  # marks every non-integration test as a unit test
+├── .github/
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── workflows/               # ci.yaml, docs-deploy.yaml, claude-code-review.yml
+├── scripts/probes/              # one-off probes kept for their measurements
 ├── docs/
+│   ├── index.md                 # the documentation site's entry page
+│   ├── conf.py                  # Sphinx configuration
 │   ├── architecture.md          # this document
+│   ├── walkthrough.md           # the MVP end to end, with its measured results
+│   ├── reference/               # generated API reference
+│   ├── assets/
 │   └── decisions/               # ADRs (0001-rag-retrieval-boundary.md, …)
 ├── packages/
 │   └── rag_core/                # Shared library — all retrieval logic
 │       ├── AGENTS.md            # canonical context — chunking, lazy-load, pgvector, rerank
 │       ├── pyproject.toml
 │       ├── src/rag_core/
-│       │   ├── ingest/          # pptx/pdf/md parsing, semantic chunking
+│       │   ├── ingest/          # md parsing and heading-aware chunking (pptx/pdf: later phase)
 │       │   ├── embed/           # fastembed embedder (lazy model load)
 │       │   ├── rerank/          # fastembed cross-encoder reranker
 │       │   ├── retrieve/        # dense + lexical (ts_rank) + RRF fusion + rerank
-│       │   ├── store/           # pgvector access, schema, migrations
+│       │   ├── store/           # pgvector access, schema, per-model embedding columns
 │       │   └── config.py
 │       └── tests/
 │   └── rag_core_testing/        # Dev-only: in-memory fakes + test data for rag_core's protocols
@@ -149,19 +163,20 @@ study_assistant/
 │   │   ├── pyproject.toml
 │   │   ├── Dockerfile
 │   │   └── src/ + tests/
-│   └── api/                     # FastAPI + LangGraph + SSE streaming
+│   └── api/                     # LangGraph agent today; FastAPI + SSE streaming: later phase
 │       ├── AGENTS.md            # canonical context — LangGraph, HITL, SSE
 │       ├── pyproject.toml
-│       ├── Dockerfile
+│       ├── Dockerfile           # later phase
 │       └── src/api/
-│           ├── graph/           # LangGraph nodes, state, HITL checkpoints
+│           ├── graph/           # LangGraph nodes, state, HITL checkpoint, Postgres saver
 │           ├── generate/        # Generator protocol + OpenAI-compatible adapter
-│           ├── routes/          # /chat (SSE), /health, /resume
 │           ├── mcp_client/      # connects to mcp_server
-│           └── main.py
+│           ├── cli.py           # `study-ask` console script, including the checkpoint flow
+│           ├── routes/          # /chat (SSE), /health, /resume: later phase
+│           └── main.py          # FastAPI application: later phase
 │       └── tests/
 ├── apps/
-│   └── web/                     # React + TypeScript
+│   └── web/                     # React + TypeScript: later phase
 │       ├── AGENTS.md            # canonical context — citations, SSE client, TS/React
 │       ├── package.json
 │       ├── Dockerfile
@@ -174,12 +189,20 @@ study_assistant/
 │   ├── AGENTS.md                # canonical context — golden-set labels, metrics, results
 │   ├── pyproject.toml
 │   ├── golden/                  # labeled questions → expected document + section
-│   ├── results/                 # saved runs, compared across changes
+│   ├── results/                 # saved runs, compared across changes, with their own README
 │   ├── src/evals/
 │   └── tests/
 └── infra/
-    └── postgres/                # pgvector init.sql, model-weights volume notes
+    └── postgres/                # init.sql: the pgvector extension and the test database
 ```
+
+The retrieval boundary has one open tension worth stating.
+[ADR 0001](decisions/0001-rag-retrieval-boundary.md) expects the backend to use the retrieval
+library directly for ingestion and administration, while the generation lane forbids any import of
+it, enforced by a test, because the agent must reach retrieval only through the MCP server
+([ADR 0012](decisions/0012-bounded-agent-over-mcp.md)). Nothing conflicts today, since the lane has
+no administrative surface and ingestion runs in the CLI. When administrative endpoints are added,
+they belong outside the lane the test guards, or the test's scope narrows to the agent's modules.
 
 ## Future Scope
 
