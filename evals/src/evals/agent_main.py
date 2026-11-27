@@ -13,7 +13,7 @@ from pathlib import Path
 from api.cli import agent_config
 from api.config import ApiSettings
 from api.generate import GenerationError, OpenAICompatibleGenerator
-from api.graph import AgentAnswer, CompiledAgent, ask, build_graph
+from api.graph import AgentAnswer, AgentConfig, CompiledAgent, ask, build_graph
 from api.mcp_client import McpSearchClient, SearchError, stdio_server
 from evals.agent import AgentEvalRun, run_agent_eval
 from evals.golden import GoldenQuestion
@@ -63,12 +63,13 @@ def check_store_ready() -> None:
     check_embedded(components.store, components.embedder.info.model_id)
 
 
-async def run_live(questions: list[GoldenQuestion]) -> AgentEvalRun:
-    """Start the MCP server, run the agent on every question, and score the answers."""
-    settings = ApiSettings()
+async def run_live(
+    questions: list[GoldenQuestion], settings: ApiSettings, config: AgentConfig
+) -> AgentEvalRun:
+    """Start the MCP server, run the agent on every question within ``config``, and score them."""
     generator = OpenAICompatibleGenerator.from_settings(settings)
     async with McpSearchClient(stdio_server(settings.mcp_server_command, Path.cwd())) as search:
-        graph = build_graph(search, generator, config=agent_config(settings))
+        graph = build_graph(search, generator, config=config)
         return await run_agent_eval(
             questions, answer=GraphAnswerer(graph), generation_model=generator.model
         )
@@ -99,12 +100,15 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         questions = load_inputs(args)
+        # Built here, before the server starts, so a setting the agent cannot honor is one line.
+        settings = ApiSettings()
+        config = agent_config(settings)
         check_store_ready()
     except (ValueError, OSError, EmbedderNotFoundError) as error:
         print(error, file=sys.stderr)
         return USAGE_ERROR
     try:
-        run = asyncio.run(run_live(questions))
+        run = asyncio.run(run_live(questions, settings, config))
     except (GenerationError, SearchError) as error:
         print(f"study-eval-agent: {error}", file=sys.stderr)
         return FAILURE

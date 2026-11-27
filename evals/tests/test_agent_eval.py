@@ -10,7 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from api.graph import AgentAnswer
+from api.config import ApiSettings
+from api.graph import AgentAnswer, AgentConfig
 from api.mcp_client import SearchHit
 from evals import agent_main
 from evals.agent import AgentEvalRun, is_grounded, run_agent_eval
@@ -170,7 +171,9 @@ def test_the_command_scores_the_golden_set_and_saves_the_run(
     """``study-eval-agent`` prints each question and the grounding totals, then saves the run."""
     asked: list[str] = []
 
-    async def fake_live_run(questions: list[GoldenQuestion]) -> AgentEvalRun:
+    async def fake_live_run(
+        questions: list[GoldenQuestion], settings: ApiSettings, config: AgentConfig
+    ) -> AgentEvalRun:
         """Score ``questions`` against prepared answers instead of the live agent."""
         for item in questions:
             asked.append(item.id)
@@ -219,3 +222,26 @@ def test_the_command_checks_labels_before_asking_anything(
 
     assert status == 2
     assert "Cachin" in capsys.readouterr().err
+
+
+def test_the_command_refuses_an_invalid_agent_setting_before_asking(
+    monkeypatch: pytest.MonkeyPatch,
+    golden_file: Path,
+    corpus: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A setting the agent cannot honor exits with status 2 before any model request."""
+
+    def store_is_ready() -> None:
+        """Skip the database check."""
+
+    monkeypatch.setattr(agent_main, "check_store_ready", store_is_ready)
+    monkeypatch.setenv("AGENT_SEARCH_LIMIT", "25")
+
+    status = agent_main.main(
+        ["smoke", "--golden", str(golden_file), "--corpus", str(corpus), "--results", str(tmp_path)]
+    )
+
+    assert status == 2
+    assert "search_limit" in capsys.readouterr().err
