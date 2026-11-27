@@ -6,9 +6,15 @@ requires-python = ">=3.12,<3.13"
 # No rag_core here: the agent reaches retrieval only through the MCP server.
 dependencies = [
     "httpx>=0.27",
+    # Imported directly for RunnableConfig, and not only through langgraph.
+    "langchain-core>=1.8",
     "langgraph>=1.0",
+    "langgraph-checkpoint-postgres>=3.2.1",
     "mcp>=1.20",
+    "pydantic>=2.13",
     "pydantic-settings>=2.0",
+    # The checkpointer's driver, imported directly to recognize its connection errors.
+    "psycopg[binary]>=3.3.4",
 ]
 
 [project.scripts]
