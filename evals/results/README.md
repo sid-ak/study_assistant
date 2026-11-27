@@ -10,6 +10,7 @@ chunks), with `k = 5` and 5 timed retrievals per question.
 | `dense-bge-small` | `BAAI/bge-small-en-v1.5`, 384 dimensions | 0.90 | 0.88 | 26.0 ms | 41.6 ms |
 | `dense-bge-base` | `BAAI/bge-base-en-v1.5`, 768 dimensions | 0.90 | 0.85 | 42.1 ms | 56.1 ms |
 | `dense-bge-small-rerank` | `BAAI/bge-small-en-v1.5`, reranked by `jina-reranker-v1-tiny-en` from 20 candidates | 0.95 | 0.83 | 283.1 ms | 417.5 ms |
+| `hybrid-bge-small-rerank` | `BAAI/bge-small-en-v1.5` and full-text search fused by RRF, reranked from 20 candidates | 0.95 | 0.83 | 330.3 ms | 451.4 ms |
 
 Latency covers embedding the query and the database search, on an Apple M1 with 8 GB of memory and
 Postgres in Docker. It varies by several milliseconds between runs of the same configuration, so
@@ -104,4 +105,36 @@ reranker's score.
 
 Reranking is therefore on by default (`RERANK_ENABLED`). It buys recall, citation recall, and a
 reliable relevance grade, for about a quarter of a second per search.
+
+## Hybrid retrieval
+
+`hybrid-bge-small-rerank` adds Postgres full-text search beside dense search: each fetches 20
+candidates, Reciprocal Rank Fusion merges the two lists, and the reranker keeps the top five.
+
+| Run | Recall@5 | MRR | p50 latency | p95 latency |
+| --- | --- | --- | --- | --- |
+| `dense-bge-small` | 0.90 | 0.88 | 26.0 ms | 41.6 ms |
+| `dense-bge-small-rerank` | 0.95 | 0.83 | 283.1 ms | 417.5 ms |
+| `hybrid-bge-small-rerank` | 0.95 | 0.83 | 330.3 ms | 451.4 ms |
+
+- Same scores as reranked dense search: every labeled section is found at the same rank for every
+  question. The only retrieved section that changes is an unlabeled fifth result for
+  `linker-out-of-memory` (the no-space write-up's Symptom gives way to the sanitizer guide's
+  overview). The cost is about 47 ms more at the median, for the second search and the fusion.
+- Why no gain: the reranker can only choose among the candidates, and on this corpus the 20 dense
+  candidates already hold every section hybrid search would add. For "What does error E1050 mean?"
+  and the bare query `E1050`, the defining section is third and fifth among the dense candidates,
+  and the reranker moves it to first with or without hybrid search. Twenty candidates cover about a
+  quarter of the 83 chunks.
+- Where hybrid search does help: with reranking off, the bare query `E1050` misses its defining
+  section in the dense top three and finds it second with hybrid search. Its fused relevance of
+  exactly 1/61 shows lexical search alone ranked it.
+- The remaining miss, `remote-cache-outage`, is unchanged: its second section is a candidate in
+  both modes, and the reranker keeps it outside the top five.
+
+Hybrid search therefore stays off by default (`HYBRID_ENABLED`). Its benefit should grow with the
+corpus, once an answer can fall outside the dense candidates, so the run is worth repeating on a
+larger collection. No agent run was made with hybrid search: nine questions retrieve exactly the
+same five sections as the reranked agent run, so their prompts would repeat ones already answered,
+and the tenth differs only in an unlabeled fifth section.
 

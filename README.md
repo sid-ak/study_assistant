@@ -54,6 +54,11 @@ Chunk 4 (#49) adds reranking, on by default: dense search fetches 20 candidates 
 agent's citation recall from 0.90 to 0.95, for about 255 ms more per search, and the agent grades
 relevance on the reranker's score.
 
+Chunk 5 (#69) adds hybrid retrieval behind `HYBRID_ENABLED`: Postgres full-text search, ranked by
+`ts_rank` (an approximation of BM25), runs beside dense search, and Reciprocal Rank Fusion merges
+the two lists before reranking. On the golden set it changes no ranking once reranking is on, so it
+is off by default; with reranking off it finds exact codes dense search misses.
+
 Later phases add the FastAPI backend and the React frontend.
 
 ## Prerequisites
