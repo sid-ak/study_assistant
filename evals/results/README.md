@@ -50,3 +50,24 @@ and given vectors for the same 83 chunks with `study embed`. Only the embedding 
 buys no recall, and its cost is a slower query, twice the vector storage (768 dimensions against
 384), and about twice the memory to load (a 1,233 MB peak against 621 MB in ADR 0010's probe).
 
+## Agent runs
+
+Agent runs send each golden question through the full agent: searches through the MCP server and
+requests to the generation model. Each question is asked once.
+
+| Run | Generation model | Answered | Grounding pass rate | Citation recall | p50 latency | p95 latency |
+| --- | --- | --- | --- | --- | --- | --- |
+| `agent-qwen3.8-27b` | `qwen/qwen3.8-27b` on Groq | 10 of 10 | 1.00 | 0.90 | 1.0 s | 9.7 s |
+
+- Every answer cites only chunks it was shown, as the answer schema's `enum` of context ids
+  requires, and no answer text contains a chunk id.
+- All ten were answered from the first search; no question needed a rewrite.
+- Citation recall misses are the two multi-document questions, `remote-cache-outage` and
+  `cmake-minimum-5-0`, each citing one of its two labeled sections. In both, the uncited section
+  was not among the five chunks retrieval returned, so the model never saw it: the misses come from
+  retrieval, not generation.
+- For `cmake-minimum-5-0`, retrieval ranked Orbit 4.0's breaking changes first, and the answer
+  still cited the CI write-up about the 5.0 upgrade and gave the correct version, 3.28.
+- One question took 9.7 s against about 1 s for the rest. The adapter does not log rate-limit
+  waits, so whether that was a wait on the per-minute token budget or a slow reply is not known.
+

@@ -192,3 +192,115 @@
    :members:
    :show-inheritance:
 ```
+
+## mcp_server.server
+
+```{eval-rst}
+.. automodule:: mcp_server.server
+   :members:
+   :show-inheritance:
+```
+
+## api.config
+
+```{eval-rst}
+.. automodule:: api.config
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.protocol
+
+```{eval-rst}
+.. automodule:: api.generate.protocol
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.openai_compatible
+
+```{eval-rst}
+.. automodule:: api.generate.openai_compatible
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.errors
+
+```{eval-rst}
+.. automodule:: api.generate.errors
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.rate_limit
+
+```{eval-rst}
+.. automodule:: api.generate.rate_limit
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.cache
+
+```{eval-rst}
+.. automodule:: api.generate.cache
+   :members:
+   :show-inheritance:
+```
+
+## api.mcp_client.client
+
+```{eval-rst}
+.. automodule:: api.mcp_client.client
+   :members:
+   :show-inheritance:
+```
+
+## api.graph.agent
+
+```{eval-rst}
+.. automodule:: api.graph.agent
+   :members:
+   :show-inheritance:
+```
+
+## api.graph.prompts
+
+```{eval-rst}
+.. automodule:: api.graph.prompts
+   :members:
+   :show-inheritance:
+```
+
+## api.graph.state
+
+```{eval-rst}
+.. automodule:: api.graph.state
+   :members:
+   :show-inheritance:
+```
+
+## api.cli
+
+```{eval-rst}
+.. automodule:: api.cli
+   :members:
+   :show-inheritance:
+```
+
+## evals.agent
+
+```{eval-rst}
+.. automodule:: evals.agent
+   :members:
+   :show-inheritance:
+```
+
+## evals.agent_main
+
+```{eval-rst}
+.. automodule:: evals.agent_main
+   :members:
+   :show-inheritance:
+```

@@ -1,0 +1,278 @@
+{
+  "name": "agent-qwen3.8-27b",
+  "created_at": "2026-11-27T00:52:17+00:00",
+  "generation_model": "qwen/qwen3.8-27b",
+  "question_count": 10,
+  "answered": 10,
+  "insufficient_context": 0,
+  "grounding_pass_rate": 1.0,
+  "citation_recall": 0.9,
+  "latency_p50_ms": 1002.5059580802917,
+  "latency_p95_ms": 9709.447083994746,
+  "questions": [
+    {
+      "id": "bazel-asan",
+      "text": "How do I run every test under AddressSanitizer with Bazel?",
+      "status": "answered",
+      "answer": "Run `bazel test --config=asan //...` to build and execute every test under AddressSanitizer.",
+      "cited_chunk_ids": [
+        "a34b707a-0d98-5e84-a17b-5570a0e6a84c"
+      ],
+      "cited_sections": [
+        "build_systems/bazel-basics.md > Bazel basics > Configs in .bazelrc"
+      ],
+      "context_ids": [
+        "a34b707a-0d98-5e84-a17b-5570a0e6a84c",
+        "75657ce1-b38f-55b6-8e0c-8f8fc0634e25",
+        "947c932a-5b76-5636-a263-22b491101d1d",
+        "63d128de-ba4d-585c-a036-f57ad730d8e8",
+        "f037971b-3329-5da3-a33f-1d6e61b56452"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "How do I run every test under AddressSanitizer with Bazel?"
+      ],
+      "latency_ms": 1324.0565420128405
+    },
+    {
+      "id": "error-e1050",
+      "text": "What does error E1050 mean?",
+      "status": "answered",
+      "answer": "Error E1050 means that there are too many in-flight requests, which occurs when requests are rejected because the in-flight limit is reached.",
+      "cited_chunk_ids": [
+        "f28d8bf5-f7d0-5433-91ee-1a88115892f2"
+      ],
+      "cited_sections": [
+        "releases/orbit-5.0.md > Orbit 5.0 release notes > New features"
+      ],
+      "context_ids": [
+        "ecfb53e1-558c-5ea7-aaea-46aeb7996d22",
+        "a0c2ad8d-91c5-5ecb-a700-ddb4fb467207",
+        "f28d8bf5-f7d0-5433-91ee-1a88115892f2",
+        "06150afc-26a1-57ca-b621-77af05ae60b5",
+        "1f13bde3-8737-5d16-91b2-eff83d60fa87"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "What does error E1050 mean?"
+      ],
+      "latency_ms": 725.6333341356367
+    },
+    {
+      "id": "pthread-oldest-linux",
+      "text": "Why does linking fail with undefined reference to pthread_create only on the oldest Linux image?",
+      "status": "answered",
+      "answer": "The oldest Linux image uses glibc 2.31, where POSIX thread functions like pthread_create reside in a separate libpthread library that must be explicitly linked, whereas newer images use glibc 2.34 or later where these functions are integrated into the main C library.",
+      "cited_chunk_ids": [
+        "8bdc2096-ecfe-5748-aa0a-32e3f36e3641"
+      ],
+      "cited_sections": [
+        "ci/undefined-reference-pthread-create.md > CI failure: undefined reference to pthread_create > Cause"
+      ],
+      "context_ids": [
+        "8bdc2096-ecfe-5748-aa0a-32e3f36e3641",
+        "73e0044a-07ce-512b-8cd5-68bb2bac1f2f",
+        "ef4ed2f0-f844-5d8d-920a-57b5a60b9385",
+        "5e140500-cac9-5757-8d68-d9b2d461d40c",
+        "e2437a96-bdb5-5e86-84a7-09196f63856d"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "Why does linking fail with undefined reference to pthread_create only on the oldest Linux image?"
+      ],
+      "latency_ms": 815.1910840533674
+    },
+    {
+      "id": "linker-out-of-memory",
+      "text": "Linking test binaries runs out of memory on CI. How can the number of simultaneous links be limited?",
+      "status": "answered",
+      "answer": "Limit the number of simultaneous links by configuring a Ninja job pool that allows only two link jobs to run at a time, while keeping full parallelism for compile jobs. This is achieved by setting the global property JOB_POOLS to define a link_pool with a size of 2 and assigning CMAKE_JOB_POOL_LINK to that pool.",
+      "cited_chunk_ids": [
+        "c2d0ccfd-3e8f-554c-a185-a5d0e7adfe18"
+      ],
+      "cited_sections": [
+        "ci/linker-killed-exit-code-137.md > CI failure: linker killed with exit code 137 > Fix"
+      ],
+      "context_ids": [
+        "c2d0ccfd-3e8f-554c-a185-a5d0e7adfe18",
+        "f1b182b9-3f07-52d3-89f7-f35e3c4fbaf1",
+        "d49aa68f-299d-514f-a937-14520a4750b1",
+        "b783506f-a094-5de0-87c9-b4cf2ccb760f",
+        "ef4ed2f0-f844-5d8d-920a-57b5a60b9385"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "Linking test binaries runs out of memory on CI. How can the number of simultaneous links be limited?"
+      ],
+      "latency_ms": 9709.447083994746
+    },
+    {
+      "id": "openssl-homebrew",
+      "text": "CMake cannot find the OpenSSL that Homebrew installed on a Mac. What should the configure step pass?",
+      "status": "answered",
+      "answer": "The configure step should pass the Homebrew prefix for the OpenSSL formula to CMake using the CMAKE_PREFIX_PATH variable, for example: cmake --preset release -DCMAKE_PREFIX_PATH=\"$(brew --prefix openssl@3)\".",
+      "cited_chunk_ids": [
+        "2352d10d-6926-5946-9403-6839a4fa65b4",
+        "6fd7a992-2099-5895-adb8-03538b4f27e9"
+      ],
+      "cited_sections": [
+        "ci/openssl-not-found-macos.md > CI failure: Could NOT find OpenSSL on macOS > Fix",
+        "build_systems/cmake-dependencies.md > CMake dependencies > find_package and CMAKE_PREFIX_PATH"
+      ],
+      "context_ids": [
+        "2352d10d-6926-5946-9403-6839a4fa65b4",
+        "70fc38d5-60a3-56d3-831a-97bcde4c270a",
+        "7d401987-446e-5c55-93d3-ea2796d52bcd",
+        "2d7080d9-2594-547c-84e7-261f918b1f07",
+        "6fd7a992-2099-5895-adb8-03538b4f27e9"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "CMake cannot find the OpenSSL that Homebrew installed on a Mac. What should the configure step pass?"
+      ],
+      "latency_ms": 1002.5059580802917
+    },
+    {
+      "id": "workers-flag-replacement",
+      "text": "Which option replaces --orbit-workers?",
+      "status": "answered",
+      "answer": "The option that replaces --orbit-workers is --orbit-max-inflight.",
+      "cited_chunk_ids": [
+        "6f0034b6-6df3-5581-a031-688c288034cd",
+        "944ef5a8-2490-58d8-8f1a-79a520366f92"
+      ],
+      "cited_sections": [
+        "releases/orbit-4.1.md > Orbit 4.1 release notes > Deprecations",
+        "releases/orbit-5.0.md > Orbit 5.0 release notes > Breaking changes"
+      ],
+      "context_ids": [
+        "6f0034b6-6df3-5581-a031-688c288034cd",
+        "4c370b85-1d17-5f44-b1cf-f8d3aee49cb0",
+        "944ef5a8-2490-58d8-8f1a-79a520366f92",
+        "935a91b8-a2bb-5431-ad33-381acc134793",
+        "63ecff9b-2e65-50ad-8539-3f1def7f9a0c"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "Which option replaces --orbit-workers?"
+      ],
+      "latency_ms": 1268.3523749001324
+    },
+    {
+      "id": "aarch64-tests",
+      "text": "How are aarch64 tests run on x86_64 CI runners?",
+      "status": "answered",
+      "answer": "Orbit sets CMAKE_CROSSCOMPILING_EMULATOR to qemu-aarch64 -L /opt/sysroots/aarch64, allowing ctest to execute each aarch64 test binary through QEMU user-mode emulation on the x86_64 runner.",
+      "cited_chunk_ids": [
+        "a173cf5a-5468-50fa-803a-441215ed31ed"
+      ],
+      "cited_sections": [
+        "build_systems/cmake-cross-compiling.md > Cross-compiling with CMake > Running tests"
+      ],
+      "context_ids": [
+        "a173cf5a-5468-50fa-803a-441215ed31ed",
+        "f037971b-3329-5da3-a33f-1d6e61b56452",
+        "74bf118a-3a58-56b6-93f8-64b08a259fd6",
+        "8111a79f-c1c0-5d51-985c-ef0bebd44d28",
+        "f1b182b9-3f07-52d3-89f7-f35e3c4fbaf1"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "How are aarch64 tests run on x86_64 CI runners?"
+      ],
+      "latency_ms": 1194.3399161100388
+    },
+    {
+      "id": "remote-cache-outage",
+      "text": "What happens to a build when the remote cache cannot be reached?",
+      "status": "answered",
+      "answer": "A failed cache lookup is treated as a miss, causing Bazel to print a warning and run the action locally, which makes the build slower rather than failing it.",
+      "cited_chunk_ids": [
+        "19fc3d1b-75dd-5bf1-9c67-f78d75113c82"
+      ],
+      "cited_sections": [
+        "build_systems/bazel-remote-cache.md > Bazel remote cache > When the cache is unreachable"
+      ],
+      "context_ids": [
+        "19fc3d1b-75dd-5bf1-9c67-f78d75113c82",
+        "ea228dd0-fe68-5298-a3b4-0bfac9c3049a",
+        "4038069d-d654-5783-b747-518e13b15d49",
+        "10de410c-2a3a-5c43-a098-cccd412f7783",
+        "e0208254-05c0-5aac-934b-9d06cdcaae7d"
+      ],
+      "grounded": true,
+      "citation_recall": 0.5,
+      "hops": 1,
+      "queries": [
+        "What happens to a build when the remote cache cannot be reached?"
+      ],
+      "latency_ms": 785.0176251959056
+    },
+    {
+      "id": "cmake-minimum-5-0",
+      "text": "What CMake version does Orbit 5.0 require?",
+      "status": "answered",
+      "answer": "Orbit 5.0 requires CMake version 3.28.",
+      "cited_chunk_ids": [
+        "2ac48685-4021-53b1-b7a9-ac84037218e6"
+      ],
+      "cited_sections": [
+        "ci/cmake-version-too-old.md > CI failure: CMake version too old after the 5.0 upgrade > Cause"
+      ],
+      "context_ids": [
+        "63ecff9b-2e65-50ad-8539-3f1def7f9a0c",
+        "2ac48685-4021-53b1-b7a9-ac84037218e6",
+        "b9b8fefb-a93c-5374-b1ff-588275be98d9",
+        "96cb9dd8-1f40-50ee-bc55-e70c7c7fcd87",
+        "7f62a3c8-cd5c-588c-abd6-cf62d1890cee"
+      ],
+      "grounded": true,
+      "citation_recall": 0.5,
+      "hops": 1,
+      "queries": [
+        "What CMake version does Orbit 5.0 require?"
+      ],
+      "latency_ms": 476.2377080041915
+    },
+    {
+      "id": "slow-benchmarks",
+      "text": "Benchmarks built with Ninja are unexpectedly slow and no build type was chosen. Why?",
+      "status": "answered",
+      "answer": "Leaving CMAKE_BUILD_TYPE empty with a single-configuration generator like Ninja produces a build with no optimization flags, which is a common cause of unexpectedly slow benchmark numbers.",
+      "cited_chunk_ids": [
+        "7fc43fcc-59a8-550b-bc66-c27964628c67"
+      ],
+      "cited_sections": [
+        "build_systems/cmake-presets.md > CMake presets > Build types"
+      ],
+      "context_ids": [
+        "7fc43fcc-59a8-550b-bc66-c27964628c67",
+        "c2d0ccfd-3e8f-554c-a185-a5d0e7adfe18",
+        "b783506f-a094-5de0-87c9-b4cf2ccb760f",
+        "d49aa68f-299d-514f-a937-14520a4750b1",
+        "1f13bde3-8737-5d16-91b2-eff83d60fa87"
+      ],
+      "grounded": true,
+      "citation_recall": 1.0,
+      "hops": 1,
+      "queries": [
+        "Benchmarks built with Ninja are unexpectedly slow and no build type was chosen. Why?"
+      ],
+      "latency_ms": 1950.192625168711
+    }
+  ]
+}

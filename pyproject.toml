@@ -11,7 +11,7 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*", "cli", "evals"]
+members = ["packages/*", "cli", "evals", "services/*"]
 
 # Workspace members are developed in-place; wire them in as editable sources.
 [tool.uv.sources]
@@ -19,6 +19,8 @@ rag_core = { workspace = true }
 rag_core_testing = { workspace = true }
 study_cli = { workspace = true }
 evals = { workspace = true }
+mcp_server = { workspace = true }
+api = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -26,6 +28,8 @@ dev = [
     "rag_core_testing",
     "study_cli",
     "evals",
+    "mcp_server",
+    "api",
     "ruff>=0.6",
     "mypy>=1.11",
     "pytest>=8.0",
@@ -40,7 +44,14 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["packages/rag_core/src", "packages/rag_core_testing/src", "cli/src", "evals/src"]
+src = [
+    "packages/rag_core/src",
+    "packages/rag_core_testing/src",
+    "cli/src",
+    "evals/src",
+    "services/mcp_server/src",
+    "services/api/src",
+]
 
 [tool.ruff.lint]
 # D10x = docstring-presence rules (pydocstyle): every module, class, function, and __init__ must be
@@ -58,6 +69,9 @@ mypy_path = [
     "packages/rag_core_testing/src",
     "cli/src",
     "evals/src",
+    "services/mcp_server/src",
+    "services/api/src",
+    "services/api/tests",
 ]
 files = [
     "packages/rag_core/src",
@@ -67,6 +81,10 @@ files = [
     "cli/tests",
     "evals/src",
     "evals/tests",
+    "services/mcp_server/src",
+    "services/mcp_server/tests",
+    "services/api/src",
+    "services/api/tests",
 ]
 explicit_package_bases = true
 namespace_packages = true
@@ -77,7 +95,7 @@ module = ["pgvector.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["packages", "cli", "evals"]
+testpaths = ["packages", "cli", "evals", "services"]
 markers = [
     "integration: tests that need a live Postgres+pgvector instance (docker compose up -d) or download and load a real model",
     "unit: fast tests with no external services (auto-applied to every non-integration test)",

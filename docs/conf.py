@@ -17,6 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "packages" / "rag_core" / "src"))
 sys.path.insert(0, str(REPO_ROOT / "cli" / "src"))
 sys.path.insert(0, str(REPO_ROOT / "evals" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "services" / "mcp_server" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "services" / "api" / "src"))
 
 project = "Study Assistant"
 author = "Sid Anandkumar"
@@ -41,6 +43,13 @@ html_title = "Study Assistant"
 # Fold type hints into the parameter descriptions rather than repeating them in the signature.
 autodoc_typehints = "description"
 autodoc_member_order = "bysource"
+# Sphinx reads "# type:" comments by parsing the source of each documented class and of every base
+# class, and writing what it finds into the live classes' __annotations__. It cannot see
+# `if TYPE_CHECKING:` blocks, so it adds pydantic BaseModel's type-checking-only
+# `__pydantic_extra__` annotation, after which every pydantic model with extra="allow" imported
+# later (in mcp and langchain_core) fails to build. The project has no type comments, so the
+# feature is turned off.
+autodoc_use_type_comments = False
 
 # The narrative docs (README, architecture, decision records) are authored to render on GitHub, so
 # they carry repo-relative file and directory links that are not in-site targets. The

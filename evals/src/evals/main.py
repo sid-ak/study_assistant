@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from evals.golden import check_labels, load_golden
+from evals.golden import GoldenQuestion, check_labels, load_golden
 from evals.runner import EvalRun, run_eval, run_path, write_run
 from rag_core.config import Settings
 from rag_core.embed import EmbedderProtocol, FastembedEmbedder
@@ -44,6 +44,27 @@ def build_parser() -> argparse.ArgumentParser:
         prog="study-eval",
         description="Score retrieval on the golden set and save the run under a name.",
     )
+    add_input_arguments(parser)
+    parser.add_argument(
+        "--k", type=int, default=5, help="Chunks retrieved per question (default 5)."
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=5,
+        help="Timed retrievals per question, for the latency percentiles (default 5).",
+    )
+    parser.add_argument(
+        "--ef-search",
+        type=int,
+        default=None,
+        help="HNSW candidate-list size for every search, 1 to 1000 (default: the index's own).",
+    )
+    return parser
+
+
+def add_input_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add the arguments every evaluation command takes: the run name and its input paths."""
     parser.add_argument("name", help="Name of the saved run, for example dense-bge-small.")
     parser.add_argument(
         "--golden",
@@ -64,22 +85,32 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("evals/results"),
         help="Folder runs are saved in (default: evals/results).",
     )
-    parser.add_argument(
-        "--k", type=int, default=5, help="Chunks retrieved per question (default 5)."
-    )
-    parser.add_argument(
-        "--repeats",
-        type=int,
-        default=5,
-        help="Timed retrievals per question, for the latency percentiles (default 5).",
-    )
-    parser.add_argument(
-        "--ef-search",
-        type=int,
-        default=None,
-        help="HNSW candidate-list size for every search, 1 to 1000 (default: the index's own).",
-    )
-    return parser
+
+
+def load_inputs(args: argparse.Namespace) -> list[GoldenQuestion]:
+    """The golden questions, once the run name is free and every label can match the corpus.
+
+    Raises ``ValueError`` (including ``GoldenSetError``) or ``OSError`` for a golden file that
+    does not exist.
+    """
+    if run_path(args.results, args.name).exists():
+        raise ValueError(f"A run named {args.name!r} is already saved in {args.results}.")
+    questions = load_golden(args.golden)
+    check_labels(questions, args.corpus)
+    return questions
+
+
+def check_embedded(store: StoreProtocol, model_id: str) -> None:
+    """Raise ``ValueError`` if a stored chunk has no vector from ``store``'s model.
+
+    Such a chunk can never be retrieved, so a run would score it as a miss: the model was
+    registered but not embedded, which is a setup problem rather than a retrieval result.
+    """
+    if store.get_unembedded_chunks(limit=1):
+        raise ValueError(
+            f"Some stored chunks have no vector from {model_id}. "
+            "Run `study embed` with this model first."
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -90,25 +121,15 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = build_parser().parse_args(argv)
     try:
-        if run_path(args.results, args.name).exists():
-            raise ValueError(f"A run named {args.name!r} is already saved in {args.results}.")
-        questions = load_golden(args.golden)
-        check_labels(questions, args.corpus)
+        questions = load_inputs(args)
     except (ValueError, OSError) as error:
         # GoldenSetError is a ValueError; OSError covers a golden file that does not exist.
         print(error, file=sys.stderr)
         return USAGE_ERROR
 
     components = build_components(Settings())
-    model_id = components.embedder.info.model_id
     try:
-        # A chunk without this model's vector can never be retrieved, so the run would score it as
-        # a miss. That means the model was registered but not embedded, not that retrieval failed.
-        if components.store.get_unembedded_chunks(limit=1):
-            raise ValueError(
-                f"Some stored chunks have no vector from {model_id}. "
-                "Run `study embed` with this model first."
-            )
+        check_embedded(components.store, components.embedder.info.model_id)
         run = run_eval(
             questions,
             embedder=components.embedder,

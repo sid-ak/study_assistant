@@ -16,13 +16,17 @@ it are the local retrieval stack with an owned eval loop (0002, models in 0010) 
     label names a heading that a chunk can carry.
   - `metrics.py`: label matching, recall, reciprocal rank, and nearest-rank percentiles.
   - `runner.py`: `run_eval`, which retrieves and scores every question, and `write_run`.
-  - `main.py`: the `study-eval` console script.
+  - `main.py`: the `study-eval` console script, and the input checks both commands share.
+  - `agent.py`: `run_agent_eval`, which runs the golden set through the agent and checks its
+    citations.
+  - `agent_main.py`: the `study-eval-agent` console script.
 - `tests/`: unit tests, run by the root `pytest`.
 
 ## Conventions
 
-- A consumer of `rag_core`, never a reimplementer. Evaluation calls the same retrieval entry point
-  the CLI and the agent use, so a run measures the real path.
+- A consumer of `rag_core` and `api`, never a reimplementer. Retrieval evaluation calls the same
+  `retrieve` the CLI and the MCP server use, and agent evaluation runs the same graph `study-ask`
+  runs, so each measures the real path.
 - Labels name a document and a section heading, never a chunk id. A chunk counts as a match when it
   comes from the labeled document and lies inside the labeled section, so labels survive
   re-chunking and re-embedding. `document` is the path relative to the ingested folder
@@ -47,3 +51,20 @@ ingested corpus (`uv run study ingest corpus/release_engineering`).
   names no heading, or a model with stored chunks it has no vector for exits with status 2. The
   last would otherwise save a run that scores those chunks as misses.
 - Saved runs are never overwritten. A new measurement gets a new name.
+
+## Evaluating the agent
+
+`uv run study-eval-agent <name>` runs every golden question through the agent (the MCP server over
+stdio and the configured generation model) and saves the run beside the retrieval runs. It spends
+free-plan quota, about one or two model requests per question; cached replies make an unchanged
+rerun free.
+
+- Grounding: an answered question is grounded when it cites at least one chunk and every cited id
+  was in the context the model was shown. The pass rate is over answered questions only, and is
+  `null` when nothing was answered.
+- Citation recall: the share of a question's labeled sections that a cited chunk lies in, averaged
+  over all questions, with an unanswered question counting as 0. Grounding says the citations are
+  real; citation recall says they point at the right place.
+- The agent run is passed to `run_agent_eval` as an async function from question to answer, so
+  tests use prepared answers and need no model, server, or database.
+
