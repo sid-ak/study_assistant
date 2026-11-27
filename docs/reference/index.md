@@ -256,3 +256,27 @@
    :members:
    :show-inheritance:
 ```
+
+## api.graph.agent
+
+```{eval-rst}
+.. automodule:: api.graph.agent
+   :members:
+   :show-inheritance:
+```
+
+## api.graph.prompts
+
+```{eval-rst}
+.. automodule:: api.graph.prompts
+   :members:
+   :show-inheritance:
+```
+
+## api.graph.state
+
+```{eval-rst}
+.. automodule:: api.graph.state
+   :members:
+   :show-inheritance:
+```
