@@ -247,3 +247,24 @@ def test_the_command_refuses_an_invalid_agent_setting_before_asking(
 
     assert status == 2
     assert "search_limit" in capsys.readouterr().err
+
+
+def test_an_agent_run_records_how_retrieval_ranked() -> None:
+    """The run names the reranker and its candidates, or None for both when search was dense."""
+    agent = PreparedAgent({"Question good?": answered(["chunk-caching"], [CACHING])})
+
+    reranked = asyncio.run(
+        run_agent_eval(
+            [question("good")],
+            answer=agent,
+            generation_model="test/model",
+            reranker="jinaai/jina-reranker-v1-tiny-en",
+            candidates=20,
+        )
+    )
+    dense = score([question("good")], agent)
+
+    assert reranked.reranker == "jinaai/jina-reranker-v1-tiny-en"
+    assert reranked.candidates == 20
+    assert dense.reranker is None
+    assert dense.candidates is None

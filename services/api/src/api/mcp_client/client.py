@@ -13,7 +13,9 @@ from mcp.server.mcpserver import MCPServer
 
 # Environment variables the MCP server reads, by prefix. Only these are passed to its process, on
 # top of the MCP SDK's safe defaults (PATH, HOME, and the like); the generation key is not.
-SERVER_ENVIRONMENT_PREFIXES = ("DATABASE_", "EMBEDDING_", "FASTEMBED_")
+# "RERANK" covers RERANK_ENABLED, RERANK_CANDIDATES, and RERANKER_MODEL: the server decides
+# whether its searches are reranked.
+SERVER_ENVIRONMENT_PREFIXES = ("DATABASE_", "EMBEDDING_", "FASTEMBED_", "RERANK")
 # Variables passed by exact name. fastembed keeps its default model cache in the temporary folder,
 # so without TMPDIR the server would use /tmp and download a second copy of the model.
 SERVER_ENVIRONMENT_NAMES = ("TMPDIR",)
@@ -123,7 +125,7 @@ def error_text(content: list[Any]) -> str:
 
 
 def server_environment(parent: Mapping[str, str]) -> dict[str, str]:
-    """The variables of ``parent`` the MCP server needs: database, embedding, and model cache."""
+    """The variables of ``parent`` the MCP server needs: database, models, and model cache."""
     environment: dict[str, str] = {}
     for name, value in parent.items():
         if name.startswith(SERVER_ENVIRONMENT_PREFIXES) or name in SERVER_ENVIRONMENT_NAMES:

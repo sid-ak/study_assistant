@@ -70,8 +70,19 @@ async def run_live(
     generator = OpenAICompatibleGenerator.from_settings(settings)
     async with McpSearchClient(stdio_server(settings.mcp_server_command, Path.cwd())) as search:
         graph = build_graph(search, generator, config=config)
+        # The server reads the same settings, so these name how its searches ranked.
+        retrieval = Settings()
+        reranker = None
+        candidates = None
+        if retrieval.rerank_enabled:
+            reranker = retrieval.reranker_model
+            candidates = retrieval.rerank_candidates
         return await run_agent_eval(
-            questions, answer=GraphAnswerer(graph), generation_model=generator.model
+            questions,
+            answer=GraphAnswerer(graph),
+            generation_model=generator.model,
+            reranker=reranker,
+            candidates=candidates,
         )
 
 
@@ -89,7 +100,10 @@ def print_agent_run(run: AgentEvalRun) -> None:
         f"answered {run.answered}/{run.question_count}  "
         f"latency p50 {run.latency_p50_ms:.0f} ms, p95 {run.latency_p95_ms:.0f} ms"
     )
-    print(f"({run.generation_model})")
+    reranked = ""
+    if run.reranker is not None:
+        reranked = f", search reranked by {run.reranker} from {run.candidates} candidates"
+    print(f"({run.generation_model}{reranked})")
 
 
 def main(argv: list[str] | None = None) -> int:
