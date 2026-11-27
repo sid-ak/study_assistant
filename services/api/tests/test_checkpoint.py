@@ -7,11 +7,17 @@ a real database.
 
 import asyncio
 import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
 
 import psycopg
 import pytest
 from api_fakes import FakeSearchClient, ScriptedGenerator
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from resume_child import CHILD_ANSWER
 
 from api.graph import APPROVE, AgentAnswer, AgentConfig, PendingReview, build_graph, resume, start
 from api.graph.checkpoint import checkpoint_serializer, postgres_checkpointer
@@ -32,9 +38,36 @@ HIT = SearchHit(
 )
 
 
+# The other half of the new-process test: a script that resumes a run and prints what it got.
+CHILD = Path(__file__).resolve().parent / "resume_child.py"
+
+
 def answer_reply(answer: str, cited: list[str]) -> str:
     """The JSON the model returns for the answer step."""
     return json.dumps({"answerable": True, "answer": answer, "cited_chunk_ids": cited})
+
+
+def resume_in_child_process(thread_id: str, database_url: str, decision: str) -> dict[str, Any]:
+    """Resume a paused run in a new Python process and return the outcome it printed.
+
+    The child is given this process's whole environment, so anything it reads implicitly, such as
+    where caches live, is the same as here. What it needs to know about the run it is told: the
+    thread id, the database, and the decision.
+    """
+    finished = subprocess.run(
+        [sys.executable, str(CHILD), thread_id, database_url, decision],
+        capture_output=True,
+        text=True,
+        cwd=CHILD.parent,
+        env=os.environ.copy(),
+        check=False,
+    )
+    if finished.returncode != 0:
+        raise AssertionError(
+            f"The resuming process failed with status {finished.returncode}:\n{finished.stderr}"
+        )
+    outcome: dict[str, Any] = json.loads(finished.stdout)
+    return outcome
 
 
 def test_the_checkpoint_serializer_keeps_a_search_hit_a_search_hit() -> None:
@@ -148,3 +181,44 @@ def test_a_run_saved_in_postgres_is_resumed_to_a_cited_answer(checkpoint_databas
     assert [citation.section for citation in answer.citations] == [
         "Bazel basics > Configs in .bazelrc"
     ]
+
+
+@pytest.mark.integration
+def test_a_paused_run_is_resumed_by_another_process(checkpoint_database_url: str) -> None:
+    """The decision can arrive from a process that never saw the question asked.
+
+    This is what the checkpoint is for: the run pauses here, this process ends, and a new Python
+    process reads the state out of Postgres and finishes the answer. The child is given no hits to
+    find, so a cited answer can only come from the saved ones, and it reports what it searched so
+    a hidden second search would show up.
+    """
+
+    async def pause() -> PendingReview:
+        async with postgres_checkpointer(checkpoint_database_url) as saver:
+            graph = build_graph(
+                FakeSearchClient({QUESTION: [HIT]}),
+                ScriptedGenerator([]),
+                config=REVIEW_CONFIG,
+                checkpointer=saver,
+            )
+            outcome = await start(graph, QUESTION, thread_id=THREAD)
+        assert isinstance(outcome, PendingReview)
+        return outcome
+
+    pending = asyncio.run(pause())
+    finished = resume_in_child_process(THREAD, checkpoint_database_url, APPROVE)
+
+    assert [source.id for source in pending.sources] == ["chunk-asan"]
+    assert finished["status"] == "answered"
+    assert finished["answer"] == CHILD_ANSWER
+    assert finished["citations"] == [
+        {
+            "id": "chunk-asan",
+            "document": "build_systems/bazel-basics.md",
+            "section": "Bazel basics > Configs in .bazelrc",
+            "relevance": 0.80,
+        }
+    ]
+    # The child restored real hits, not plain dictionaries, and never searched for them.
+    assert finished["hit_types"] == ["SearchHit"]
+    assert finished["searched"] == []
