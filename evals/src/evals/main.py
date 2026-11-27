@@ -13,6 +13,7 @@ from evals.golden import GoldenQuestion, check_labels, load_golden
 from evals.runner import EvalRun, run_eval, run_path, write_run
 from rag_core.config import Settings
 from rag_core.embed import EmbedderProtocol, FastembedEmbedder
+from rag_core.rerank import RerankerProtocol, build_reranker
 from rag_core.store import EmbedderNotFoundError, Store, StoreProtocol
 
 # Exit status for a run that could not start because of its input, as argparse uses for usage.
@@ -25,6 +26,9 @@ class Components:
 
     embedder: EmbedderProtocol
     store: StoreProtocol
+    # The configured reranker, or None when RERANK_ENABLED is off, and its candidate count.
+    reranker: RerankerProtocol | None = None
+    rerank_candidates: int = 20
 
 
 def build_components(settings: Settings) -> Components:
@@ -35,7 +39,12 @@ def build_components(settings: Settings) -> Components:
     """
     embedder = FastembedEmbedder.from_settings(settings)
     store = Store(settings.database_url, embedder=embedder.info)
-    return Components(embedder=embedder, store=store)
+    return Components(
+        embedder=embedder,
+        store=store,
+        reranker=build_reranker(settings),
+        rerank_candidates=settings.rerank_candidates,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -137,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
             k=args.k,
             ef_search=args.ef_search,
             repeats=args.repeats,
+            reranker=components.reranker,
+            candidates=components.rerank_candidates,
         )
     except (ValueError, EmbedderNotFoundError) as error:
         print(error, file=sys.stderr)
@@ -157,7 +168,10 @@ def print_run(run: EvalRun) -> None:
         f"Recall@{run.k} {run.recall_at_k:.2f}  MRR {run.mrr:.2f}  "
         f"latency p50 {run.latency_p50_ms:.1f} ms, p95 {run.latency_p95_ms:.1f} ms"
     )
+    reranked = ""
+    if run.reranker is not None:
+        reranked = f", reranked by {run.reranker} from {run.candidates} candidates"
     print(
         f"({run.model_id}, {len(run.questions)} questions x {run.repeats} repeats, "
-        f"ef_search {ef_search})"
+        f"ef_search {ef_search}{reranked})"
     )

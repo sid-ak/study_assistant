@@ -70,9 +70,30 @@ async def run_live(
     generator = OpenAICompatibleGenerator.from_settings(settings)
     async with McpSearchClient(stdio_server(settings.mcp_server_command, Path.cwd())) as search:
         graph = build_graph(search, generator, config=config)
+        # The server reads the same settings, so these name how its searches ranked.
+        retrieval = Settings()
+        reranker = None
+        if retrieval.rerank_enabled:
+            reranker = retrieval.reranker_model
+        candidates = recorded_candidates(retrieval, config)
         return await run_agent_eval(
-            questions, answer=GraphAnswerer(graph), generation_model=generator.model
+            questions,
+            answer=GraphAnswerer(graph),
+            generation_model=generator.model,
+            reranker=reranker,
+            candidates=candidates,
         )
+
+
+def recorded_candidates(retrieval: Settings, config: AgentConfig) -> int | None:
+    """How many candidates the MCP server reranks per search, or ``None`` when it does not rerank.
+
+    The server widens its candidates to the search limit when the limit is larger, so the record
+    does the same.
+    """
+    if not retrieval.rerank_enabled:
+        return None
+    return max(retrieval.rerank_candidates, config.search_limit)
 
 
 def print_agent_run(run: AgentEvalRun) -> None:
@@ -89,7 +110,10 @@ def print_agent_run(run: AgentEvalRun) -> None:
         f"answered {run.answered}/{run.question_count}  "
         f"latency p50 {run.latency_p50_ms:.0f} ms, p95 {run.latency_p95_ms:.0f} ms"
     )
-    print(f"({run.generation_model})")
+    reranked = ""
+    if run.reranker is not None:
+        reranked = f", search reranked by {run.reranker} from {run.candidates} candidates"
+    print(f"({run.generation_model}{reranked})")
 
 
 def main(argv: list[str] | None = None) -> int:

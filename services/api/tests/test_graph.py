@@ -22,14 +22,19 @@ REWRITTEN = "bazel config asan AddressSanitizer test flag"
 CONFIG = AgentConfig(max_hops=2, relevance_threshold=0.65, search_limit=5)
 
 
-def hit(chunk_id: str, distance: float, content: str = "Some text.") -> SearchHit:
-    """A search hit with the given id and cosine distance (similarity is 1 minus distance)."""
+def hit(
+    chunk_id: str, distance: float, content: str = "Some text.", relevance: float | None = None
+) -> SearchHit:
+    """A search hit; its relevance defaults to the cosine similarity, 1 minus ``distance``."""
+    if relevance is None:
+        relevance = 1.0 - distance
     return SearchHit(
         id=chunk_id,
         document="build_systems/bazel-basics.md",
         section="Bazel basics > Configs in .bazelrc",
         content=content,
         distance=distance,
+        relevance=relevance,
     )
 
 
@@ -118,6 +123,30 @@ def test_no_hits_at_all_counts_as_irrelevant() -> None:
 
     assert result.status == "insufficient_context"
     assert result.context == []
+
+
+def test_grading_reads_the_relevance_the_search_reports() -> None:
+    """A reranked hit far in vector space but scored relevant is graded on its score."""
+    reranked = [hit("chunk-asan", 0.60, "bazel test --config=asan //...", relevance=0.92)]
+    search = FakeSearchClient({QUESTION: reranked})
+    generator = ScriptedGenerator([answer_reply("Use --config=asan.", ["chunk-asan"])])
+
+    result = run(search, generator)
+
+    assert result.status == "answered"
+    assert result.hops == 1
+
+
+def test_a_low_reranker_score_is_irrelevant_however_near_the_vector() -> None:
+    """A hit close in vector space but scored low by the reranker sends the graph to a rewrite."""
+    near_but_wrong = [hit("chunk-near", 0.10, relevance=0.20)]
+    search = FakeSearchClient({QUESTION: near_but_wrong})
+    generator = ScriptedGenerator([REWRITTEN])
+
+    result = run(search, generator)
+
+    assert result.status == "insufficient_context"
+    assert search.queries == [QUESTION, REWRITTEN]
 
 
 def test_no_hits_is_never_relevant_even_at_a_zero_threshold() -> None:

@@ -120,3 +120,19 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
 - The DB search is approximate once the planner uses the index; `InMemoryStore` compares against
   every chunk and is exact. Contract tests use corpora small enough that both return the same
   ranking.
+
+## Reranker conventions
+
+- `RerankerProtocol.score(query, documents)` returns relevance from 0 to 1, one per document in
+  order. `FastembedReranker` applies a sigmoid to the cross-encoder's logit, so a threshold means
+  the same for any reranker, and the fake (`OverlapReranker`) returns the share of query words a
+  document contains.
+- The reranker loads its model on first `score`, like the embedder; building one only checks the
+  model id against fastembed's list.
+- `RERANK_ENABLED` (default on), `RERANKER_MODEL`, and `RERANK_CANDIDATES` (default 20) configure
+  it; `build_reranker(settings)` returns the reranker or `None`, and every caller of `retrieve`
+  builds it this way.
+- `retrieve` is two separate steps, `search` then `rerank`, so another step (such as hybrid fusion)
+  can sit between them. With a reranker it searches `candidates` chunks and keeps the `limit` best.
+  Each `RetrievedChunk.relevance` is the reranker's score, or the cosine similarity without one, and
+  `RetrievalResult.rerank_latency_ms` times the reranking step alone.

@@ -304,3 +304,27 @@
    :members:
    :show-inheritance:
 ```
+
+## rag_core.rerank.protocol
+
+```{eval-rst}
+.. automodule:: rag_core.rerank.protocol
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.rerank.fastembed_reranker
+
+```{eval-rst}
+.. automodule:: rag_core.rerank.fastembed_reranker
+   :members:
+   :show-inheritance:
+```
+
+## rag_core.rerank.settings
+
+```{eval-rst}
+.. automodule:: rag_core.rerank.settings
+   :members:
+   :show-inheritance:
+```

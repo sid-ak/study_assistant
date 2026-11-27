@@ -2,13 +2,14 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from evals.golden import ExpectedSection, GoldenQuestion
 from evals.metrics import percentile
 from evals.runner import EvalRun, run_eval, write_run
-from rag_core_testing import HashingEmbedder, InMemoryStore
+from rag_core_testing import HashingEmbedder, InMemoryStore, OverlapReranker
 
 
 class CountingEmbedder(HashingEmbedder):
@@ -110,14 +111,19 @@ def test_run_eval_records_its_settings(
 
 @pytest.mark.parametrize(
     "settings",
-    [{"k": 0}, {"repeats": 0}, {"k": 5, "ef_search": 2}],
-    ids=["k below one", "repeats below one", "ef_search below k"],
+    [
+        {"k": 0},
+        {"repeats": 0},
+        {"k": 5, "ef_search": 2},
+        {"k": 5, "reranker": OverlapReranker(), "candidates": 2},
+    ],
+    ids=["k below one", "repeats below one", "ef_search below k", "candidates below k"],
 )
 def test_run_eval_rejects_invalid_settings(
     store: InMemoryStore,
     embedder: HashingEmbedder,
     caching_question: GoldenQuestion,
-    settings: dict[str, int],
+    settings: dict[str, Any],
 ) -> None:
     """Settings retrieval cannot honor raise ``ValueError``."""
     with pytest.raises(ValueError):
@@ -172,3 +178,43 @@ def test_write_run_rejects_a_name_that_is_not_a_plain_file_name(
     """Names are letters, digits, dots, dashes, and underscores, so a run stays in its folder."""
     with pytest.raises(ValueError):
         write_run(run, tmp_path, name=name)
+
+
+def test_run_eval_reranks_and_records_the_reranker(
+    store: InMemoryStore, embedder: HashingEmbedder, caching_question: GoldenQuestion
+) -> None:
+    """With a reranker, the run uses it for every question and names it and its candidates."""
+    run = run_eval(
+        [caching_question],
+        embedder=embedder,
+        store=store,
+        k=1,
+        reranker=OverlapReranker(),
+        candidates=3,
+    )
+
+    assert run.reranker == "test/overlap-reranker"
+    assert run.candidates == 3
+    assert run.questions[0].recall == 1.0
+
+
+def test_run_eval_without_a_reranker_records_none(run: EvalRun) -> None:
+    """A dense-only run says so in its saved settings."""
+    assert run.reranker is None
+    assert run.candidates is None
+
+
+def test_run_eval_records_the_candidates_actually_reranked(
+    store: InMemoryStore, embedder: HashingEmbedder, caching_question: GoldenQuestion
+) -> None:
+    """A store holding fewer chunks than requested records how many the reranker scored."""
+    run = run_eval(
+        [caching_question],
+        embedder=embedder,
+        store=store,
+        k=1,
+        reranker=OverlapReranker(),
+        candidates=20,
+    )
+
+    assert run.candidates == 3

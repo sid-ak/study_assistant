@@ -18,6 +18,7 @@ from rag_core.embed import (
     register_embedder,
 )
 from rag_core.ingest import ingest_folder
+from rag_core.rerank import RerankerProtocol, build_reranker
 from rag_core.retrieve import retrieve
 from rag_core.store import EmbedderNotFoundError, Store, StoreProtocol
 from rag_core.store.embedders import EmbedderRegistry, EmbedderRegistryProtocol
@@ -35,6 +36,9 @@ class Components:
     embedder: EmbedderProtocol
     store: StoreProtocol
     registry: EmbedderRegistryProtocol
+    # The reranker study query uses, or None for dense search only, and its candidate count.
+    reranker: RerankerProtocol | None = None
+    rerank_candidates: int = 20
 
 
 def build_components(settings: Settings) -> Components:
@@ -46,7 +50,13 @@ def build_components(settings: Settings) -> Components:
     embedder = FastembedEmbedder.from_settings(settings)
     store = Store(settings.database_url, embedder=embedder.info)
     registry = EmbedderRegistry(settings.database_url)
-    return Components(embedder=embedder, store=store, registry=registry)
+    return Components(
+        embedder=embedder,
+        store=store,
+        registry=registry,
+        reranker=build_reranker(settings),
+        rerank_candidates=settings.rerank_candidates,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -150,18 +160,28 @@ def body_preview(content: str, metadata: dict[str, Any]) -> str:
 def run_query(text: str, limit: int, ef_search: int | None, components: Components) -> int:
     """Print the ``limit`` chunks nearest to ``text`` and the search latency; return the status.
 
-    Each result line shows the rank, the cosine distance, the chunk id, and the chunk's source and
-    headings, followed by the start of its text. The model is loaded before the timed search, so
+    Each result line shows the rank, the relevance the ranking used (the reranker's score, or the
+    cosine similarity without one), the chunk id, and the chunk's source and headings, followed by
+    the start of its text. The model is loaded before the timed search, so
     the reported latency is embedding the query plus searching, not loading the model.
     """
     components.store.initialize()
     embedder = components.embedder
     model_id = embedder.info.model_id
-    # The first embedding in a process loads the model; do it here, outside the timed search.
+    # The first embedding in a process loads the model; do it here, outside the timed search, and
+    # load the reranker the same way.
     embedder.embed_query("warm up")
+    if components.reranker is not None:
+        components.reranker.score("warm up", ["warm up"])
     try:
         result = retrieve(
-            text, embedder=embedder, store=components.store, limit=limit, ef_search=ef_search
+            text,
+            embedder=embedder,
+            store=components.store,
+            limit=limit,
+            ef_search=ef_search,
+            reranker=components.reranker,
+            candidates=components.rerank_candidates,
         )
     except EmbedderNotFoundError:
         print(
@@ -175,15 +195,21 @@ def run_query(text: str, limit: int, ef_search: int | None, components: Componen
         return USAGE_ERROR
 
     for rank, chunk in enumerate(result.chunks, start=1):
-        print(f"{rank}. {chunk.distance:.4f}  {chunk.id}  {chunk_location(chunk.metadata)}")
+        print(f"{rank}. {chunk.relevance:.4f}  {chunk.id}  {chunk_location(chunk.metadata)}")
         print(f"   {body_preview(chunk.content, chunk.metadata)}")
     if ef_search is None:
         ef_text = "default"
     else:
         ef_text = str(ef_search)
+    reranked_text = ""
+    if components.reranker is not None:
+        # The count retrieve actually used, which it widens to the limit when that is larger.
+        reranked_text = (
+            f", reranked by {components.reranker.model_id} from {result.candidates} candidates"
+        )
     print(
         f"{len(result.chunks)} results in {result.latency_ms:.1f} ms "
-        f"({model_id}, ef_search {ef_text})"
+        f"({model_id}, ef_search {ef_text}{reranked_text})"
     )
     if not result.chunks:
         print("Nothing is ingested yet: run study ingest <folder> first.")

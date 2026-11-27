@@ -17,9 +17,12 @@ from evals import agent_main
 from evals.agent import AgentEvalRun, is_grounded, run_agent_eval
 from evals.golden import ExpectedSection, GoldenQuestion
 from evals.runner import write_run
+from rag_core.config import Settings
 
-CACHING = SearchHit("chunk-caching", "build.md", "Build > Caching", "ccache stores objects.", 0.2)
-PRESETS = SearchHit("chunk-presets", "build.md", "Build > Presets", "Run cmake --preset.", 0.4)
+CACHING = SearchHit(
+    "chunk-caching", "build.md", "Build > Caching", "ccache stores objects.", 0.2, 0.8
+)
+PRESETS = SearchHit("chunk-presets", "build.md", "Build > Presets", "Run cmake --preset.", 0.4, 0.6)
 
 
 def question(question_id: str) -> GoldenQuestion:
@@ -245,3 +248,33 @@ def test_the_command_refuses_an_invalid_agent_setting_before_asking(
 
     assert status == 2
     assert "search_limit" in capsys.readouterr().err
+
+
+def test_an_agent_run_records_how_retrieval_ranked() -> None:
+    """The run names the reranker and its candidates, or None for both when search was dense."""
+    agent = PreparedAgent({"Question good?": answered(["chunk-caching"], [CACHING])})
+
+    reranked = asyncio.run(
+        run_agent_eval(
+            [question("good")],
+            answer=agent,
+            generation_model="test/model",
+            reranker="jinaai/jina-reranker-v1-tiny-en",
+            candidates=20,
+        )
+    )
+    dense = score([question("good")], agent)
+
+    assert reranked.reranker == "jinaai/jina-reranker-v1-tiny-en"
+    assert reranked.candidates == 20
+    assert dense.reranker is None
+    assert dense.candidates is None
+
+
+def test_recorded_candidates_follow_the_servers_widening() -> None:
+    """The server reranks at least the search limit, so the record says so too."""
+    settings = Settings(rerank_enabled=True, rerank_candidates=3)
+
+    assert agent_main.recorded_candidates(settings, AgentConfig(search_limit=5)) == 5
+    assert agent_main.recorded_candidates(settings, AgentConfig(search_limit=2)) == 3
+    assert agent_main.recorded_candidates(Settings(rerank_enabled=False), AgentConfig()) is None

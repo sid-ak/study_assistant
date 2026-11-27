@@ -12,6 +12,7 @@ from evals.golden import GoldenQuestion
 from evals.metrics import percentile, reciprocal_rank, section_recall
 from rag_core.embed import EmbedderProtocol
 from rag_core.ingest.chunking import BREADCRUMB_SEPARATOR
+from rag_core.rerank import RerankerProtocol
 from rag_core.retrieve import RetrievalResult, retrieve
 from rag_core.store import StoreProtocol
 
@@ -53,11 +54,39 @@ class EvalRun:
     k: int
     ef_search: int | None
     repeats: int
+    # The reranker's model and its candidate count, or None for both in a dense-only run.
+    reranker: str | None
+    candidates: int | None
     recall_at_k: float
     mrr: float
     latency_p50_ms: float
     latency_p95_ms: float
     questions: list[QuestionResult]
+
+
+@dataclass(frozen=True)
+class RetrievalSettings:
+    """How every question in a run is retrieved: the components and the search settings."""
+
+    embedder: EmbedderProtocol
+    store: StoreProtocol
+    k: int
+    ef_search: int | None
+    reranker: RerankerProtocol | None
+    candidates: int
+
+
+def retrieve_once(text: str, settings: RetrievalSettings) -> RetrievalResult:
+    """Retrieve the top ``k`` chunks for ``text`` with the run's settings."""
+    return retrieve(
+        text,
+        embedder=settings.embedder,
+        store=settings.store,
+        limit=settings.k,
+        ef_search=settings.ef_search,
+        reranker=settings.reranker,
+        candidates=settings.candidates,
+    )
 
 
 def run_eval(
@@ -68,6 +97,8 @@ def run_eval(
     k: int = 5,
     ef_search: int | None = None,
     repeats: int = 1,
+    reranker: RerankerProtocol | None = None,
+    candidates: int = 20,
 ) -> EvalRun:
     """Retrieve the top ``k`` chunks for each question and score them against its labels.
 
@@ -83,19 +114,27 @@ def run_eval(
     if repeats < 1:
         raise ValueError(f"repeats must be at least 1, not {repeats}.")
 
-    # Untimed warm-up: an embedder that loads its model on first use does it here.
-    retrieve(questions[0].text, embedder=embedder, store=store, limit=k, ef_search=ef_search)
+    if reranker is not None and candidates < k:
+        raise ValueError(f"candidates ({candidates}) must be at least k ({k}).")
+    settings = RetrievalSettings(
+        embedder=embedder,
+        store=store,
+        k=k,
+        ef_search=ef_search,
+        reranker=reranker,
+        candidates=candidates,
+    )
+
+    # Untimed warm-up: an embedder or reranker that loads its model on first use does it here. It
+    # also reports how many chunks the reranker scores, fewer than requested on a small store.
+    warm_up = retrieve_once(questions[0].text, settings)
 
     results: list[QuestionResult] = []
     all_latencies: list[float] = []
     for question in questions:
         attempts: list[RetrievalResult] = []
         for _ in range(repeats):
-            attempts.append(
-                retrieve(
-                    question.text, embedder=embedder, store=store, limit=k, ef_search=ef_search
-                )
-            )
+            attempts.append(retrieve_once(question.text, settings))
         latencies = [attempt.latency_ms for attempt in attempts]
         all_latencies.extend(latencies)
 
@@ -132,6 +171,8 @@ def run_eval(
         k=k,
         ef_search=ef_search,
         repeats=repeats,
+        reranker=None if reranker is None else reranker.model_id,
+        candidates=warm_up.candidates,
         recall_at_k=total_recall / len(results),
         mrr=total_reciprocal_rank / len(results),
         latency_p50_ms=percentile(all_latencies, 50),

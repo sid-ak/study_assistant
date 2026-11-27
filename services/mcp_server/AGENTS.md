@@ -11,7 +11,8 @@ the retrieval boundary (0001).
   its standard input and output. It reads the same settings as the `study` CLI (`DATABASE_URL`,
   `EMBEDDING_*`), loads the embedding model at startup, and searches that model's vectors.
 - One tool, `search(query, limit=5)`: returns up to `limit` (1 to 20) chunks nearest to the query,
-  each as `{id, document, section, content, distance}`. `id` is the stored chunk id, which is what
+  each as `{id, document, section, content, distance, relevance}`, ordered by relevance:
+  the reranker's score from 0 to 1 when `RERANK_ENABLED` is on, otherwise the cosine similarity. `id` is the stored chunk id, which is what
   answers cite. `section` is the heading path joined with ` > `. `distance` is cosine distance.
 - Invalid arguments raise `ToolError`, which the MCP SDK returns to the client as an error result
   carrying the message. Any other exception from a tool counts as a crash: the client sees only

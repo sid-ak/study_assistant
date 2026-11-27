@@ -16,6 +16,7 @@ CITED = SearchHit(
     section="Bazel basics > Configs in .bazelrc",
     content="bazel test --config=asan //...",
     distance=0.25,
+    relevance=0.75,
 )
 ANSWERED = AgentAnswer(
     status="answered",

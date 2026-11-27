@@ -30,8 +30,9 @@ bounded agent (0012).
 - The graph is a fixed state machine, not a tool-calling loop: `retrieve -> grade_relevance ->`
   `generate`, or `rewrite_query -> retrieve`, or `insufficient_context`. It searches at most
   `max_hops` times (default 2).
-- One model request per step. Grading uses the top hit's similarity (1 minus cosine distance)
-  against `relevance_threshold` (default 0.65), with no model call. Only `rewrite_query` (free text)
+- One model request per step. Grading uses the top hit's `relevance` as the MCP server reports it
+  (the cross-encoder's score when `RERANK_ENABLED` is on, the cosine similarity otherwise) against
+  `relevance_threshold` (default 0.65), with no model call. Only `rewrite_query` (free text)
   and `generate` (strict JSON schema) call the model.
 - The answer schema's `cited_chunk_ids` is an `enum` of the context's chunk ids, and the
   instructions keep ids out of the answer text. `AgentAnswer.cited_chunk_ids` keeps whatever the

@@ -51,6 +51,7 @@ def test_search_returns_typed_hits_nearest_first(server: MCPServer) -> None:
     assert hits[0].section == "Build > Caching"
     assert "ccache stores compiled objects." in hits[0].content
     assert hits[0].distance <= hits[1].distance
+    assert hits[0].relevance == pytest.approx(1.0 - hits[0].distance)
     assert len(hits[0].id) == 36
 
 
@@ -85,6 +86,9 @@ def test_server_environment_passes_only_what_the_server_needs() -> None:
         "EMBEDDING_DIMENSION": "768",
         "FASTEMBED_CACHE_PATH": "/models",
         "TMPDIR": "/var/folders/xy/T/",
+        "RERANK_ENABLED": "true",
+        "RERANKER_MODEL": "jinaai/jina-reranker-v1-tiny-en",
+        "RERANK_CANDIDATES": "30",
         "GENERATION_API_KEY": "sk-secret",
         "UNRELATED": "x",
     }
@@ -94,6 +98,10 @@ def test_server_environment_passes_only_what_the_server_needs() -> None:
     # fastembed's default model cache is under the temporary folder, so without TMPDIR the server
     # would look in /tmp and download its own copy of the model.
     assert environment["TMPDIR"] == "/var/folders/xy/T/"
+    # The server decides whether to rerank, so it must see the reranking settings.
+    assert environment["RERANK_ENABLED"] == "true"
+    assert environment["RERANKER_MODEL"] == "jinaai/jina-reranker-v1-tiny-en"
+    assert environment["RERANK_CANDIDATES"] == "30"
 
     assert environment["DATABASE_URL"] == "postgresql://db"
     assert environment["EMBEDDING_MODEL"] == "BAAI/bge-base-en-v1.5"

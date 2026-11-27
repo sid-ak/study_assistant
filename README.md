@@ -49,6 +49,11 @@ Chunk 3 (#48) adds the generation lane:
 - `study-eval-agent <name>` checks citations over the golden set: all ten answered, all grounded,
   with citation recall 0.90.
 
+Chunk 4 (#49) adds reranking, on by default: dense search fetches 20 candidates and the
+`jina-reranker-v1-tiny-en` cross-encoder rescores them. Recall@5 rises from 0.90 to 0.95 and the
+agent's citation recall from 0.90 to 0.95, for about 255 ms more per search, and the agent grades
+relevance on the reranker's score.
+
 Later phases add the FastAPI backend and the React frontend.
 
 ## Prerequisites

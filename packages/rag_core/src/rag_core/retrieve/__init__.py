@@ -4,6 +4,6 @@
 and the time the whole search took.
 """
 
-from rag_core.retrieve.dense import RetrievalResult, RetrievedChunk, retrieve
+from rag_core.retrieve.dense import RetrievalResult, RetrievedChunk, rerank, retrieve, search
 
-__all__ = ["RetrievalResult", "RetrievedChunk", "retrieve"]
+__all__ = ["RetrievalResult", "RetrievedChunk", "rerank", "retrieve", "search"]

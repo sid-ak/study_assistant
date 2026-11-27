@@ -50,6 +50,9 @@ class AgentEvalRun:
     """
 
     generation_model: str
+    # The reranker the MCP server ranked with and its candidate count, or None for dense search.
+    reranker: str | None
+    candidates: int | None
     question_count: int
     answered: int
     insufficient_context: int
@@ -84,7 +87,12 @@ def hit_metadata(hit: SearchHit) -> dict[str, Any]:
 
 
 async def run_agent_eval(
-    questions: list[GoldenQuestion], *, answer: AnswerFunction, generation_model: str
+    questions: list[GoldenQuestion],
+    *,
+    answer: AnswerFunction,
+    generation_model: str,
+    reranker: str | None = None,
+    candidates: int | None = None,
 ) -> AgentEvalRun:
     """Ask each question through ``answer`` and score the answers.
 
@@ -116,10 +124,15 @@ async def run_agent_eval(
                 latency_ms=latency_ms,
             )
         )
-    return summarize(results, generation_model)
+    return summarize(results, generation_model, reranker, candidates)
 
 
-def summarize(results: list[AgentQuestionResult], generation_model: str) -> AgentEvalRun:
+def summarize(
+    results: list[AgentQuestionResult],
+    generation_model: str,
+    reranker: str | None,
+    candidates: int | None,
+) -> AgentEvalRun:
     """The run's totals from its per-question results."""
     answered = 0
     grounded = 0
@@ -137,6 +150,8 @@ def summarize(results: list[AgentQuestionResult], generation_model: str) -> Agen
         grounding_pass_rate = grounded / answered
     return AgentEvalRun(
         generation_model=generation_model,
+        reranker=reranker,
+        candidates=candidates,
         question_count=len(results),
         answered=answered,
         insufficient_context=len(results) - answered,
