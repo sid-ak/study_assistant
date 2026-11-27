@@ -9,6 +9,11 @@ bounded agent (0012).
 
 ## Surface
 
+- `study-ask "<question>"`: starts the MCP server over stdio, runs the agent once, and prints
+  the answer with its sources (document and heading path), or a plain insufficient-context
+  message, then the searches made. Exits 1 with a one-line message if the model or the search
+  tool fails. Bounds come from `AGENT_MAX_HOPS`, `AGENT_RELEVANCE_THRESHOLD`, and
+  `AGENT_SEARCH_LIMIT`.
 - `api.graph`: `build_graph(search, generator, config=..., checkpointer=None)` compiles the agent,
   and `ask(graph, question, thread_id=None)` runs it and returns an `AgentAnswer` (status, answer,
   cited chunk ids, the resolved citations, the context shown to the model, queries, hops).

@@ -280,3 +280,11 @@
    :members:
    :show-inheritance:
 ```
+
+## api.cli
+
+```{eval-rst}
+.. automodule:: api.cli
+   :members:
+   :show-inheritance:
+```

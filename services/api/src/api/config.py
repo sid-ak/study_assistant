@@ -22,3 +22,12 @@ class ApiSettings(BaseSettings):
     generation_api_key: SecretStr | None = None
     # Where replies are cached, relative to the working folder.
     generation_cache_dir: Path | None = Path(".cache/generation")
+
+    # The command that starts the MCP server over stdio.
+    mcp_server_command: str = "study-mcp"
+
+    # The agent's bounds: searches per question, the relevance threshold on the top hit's cosine
+    # similarity, and chunks per search.
+    agent_max_hops: int = 2
+    agent_relevance_threshold: float = 0.65
+    agent_search_limit: int = 5
