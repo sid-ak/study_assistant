@@ -45,7 +45,7 @@ class RetrievalResult:
     chunks: list[RetrievedChunk]
     latency_ms: float
     rerank_latency_ms: float = 0.0
-    # How many dense candidates the reranker scored, after widening to the limit; None without one.
+    # How many chunks the reranker scored; None without one.
     candidates: int | None = None
 
 
@@ -194,7 +194,8 @@ def retrieve(
         rerank_started = time.perf_counter()
         chunks = rerank(query, found, reranker=reranker, limit=limit)
         rerank_latency_ms = (time.perf_counter() - rerank_started) * 1000.0
-        used_candidates = pool
+        # What the reranker was given, which is fewer than requested when the store holds fewer.
+        used_candidates = len(found)
     latency_ms = (time.perf_counter() - started) * 1000.0
     return RetrievalResult(
         chunks=chunks,

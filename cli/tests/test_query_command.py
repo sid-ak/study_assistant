@@ -133,7 +133,8 @@ def test_query_reranks_when_the_components_have_a_reranker(
 
     assert main(["query", "undefined reference to pthread_create"]) == 0
     output = capsys.readouterr().out
-    assert "reranked by test/overlap-reranker from 20 candidates" in output
+    # The corpus holds two chunks, so that is all the reranker can score, whatever was requested.
+    assert "reranked by test/overlap-reranker from 2 candidates" in output
     results = RESULT_LINE.findall(output)
     assert results[0][3] == "ci.md > Failure"
     relevances = [float(relevance) for _, relevance, _, _ in results]

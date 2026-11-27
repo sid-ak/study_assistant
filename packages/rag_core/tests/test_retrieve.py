@@ -394,3 +394,17 @@ def test_lexical_search_returns_retrieved_chunks_without_a_distance(
     assert chunk.content == DOCUMENTS[2]
     assert chunk.distance is None
     assert chunk.relevance == 0.5
+
+
+def test_candidates_counts_the_chunks_actually_reranked(hashing_store: StoreProtocol) -> None:
+    """A store holding fewer chunks than requested reports how many the reranker really scored."""
+    result = retrieve(
+        "asan",
+        embedder=HashingEmbedder(),
+        store=hashing_store,
+        limit=1,
+        reranker=ScriptedReranker({}),
+        candidates=20,
+    )
+
+    assert result.candidates == len(DOCUMENTS)
