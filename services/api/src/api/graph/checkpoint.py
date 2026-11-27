@@ -8,10 +8,15 @@ it: retrieval stays behind the search tool.
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import psycopg
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from api.mcp_client import SearchHit
+
+
+class CheckpointError(Exception):
+    """A paused run could not be saved or read, because the database was unreachable."""
 
 
 def checkpoint_serializer() -> JsonPlusSerializer:
@@ -28,15 +33,22 @@ async def postgres_checkpointer(database_url: str) -> AsyncIterator[AsyncPostgre
     """Open a saver for paused runs on ``database_url``, creating its tables on first use.
 
     Raises ``ValueError`` without a connection string, so a run cannot reach its pause before
-    finding out that there is nowhere to save it.
+    finding out that there is nowhere to save it, and ``CheckpointError`` when the database cannot
+    be reached, here or later in the run, so the caller can report one line instead of a driver
+    traceback.
     """
     if not database_url.strip():
         raise ValueError(
             "Saving a paused run needs a database connection string; set DATABASE_URL."
         )
-    async with AsyncPostgresSaver.from_conn_string(
-        database_url, serde=checkpoint_serializer()
-    ) as saver:
-        # Idempotent: it creates the checkpoint tables the first time and checks them after that.
-        await saver.setup()
-        yield saver
+    try:
+        async with AsyncPostgresSaver.from_conn_string(
+            database_url, serde=checkpoint_serializer()
+        ) as saver:
+            # Idempotent: it creates the tables the first time and checks them after that.
+            await saver.setup()
+            yield saver
+    except psycopg.OperationalError as error:
+        raise CheckpointError(
+            f"The database holding paused runs could not be reached: {error}"
+        ) from error

@@ -23,7 +23,7 @@ from api.graph import (
     resume,
     start,
 )
-from api.graph.checkpoint import postgres_checkpointer
+from api.graph.checkpoint import CheckpointError, postgres_checkpointer
 from api.mcp_client import McpSearchClient, SearchError, stdio_server
 
 # Exit status when the model or the search tool failed.
@@ -198,8 +198,8 @@ def print_outcome(outcome: AgentOutcome) -> None:
 def main(argv: list[str] | None = None) -> int:
     """Run ``study-ask`` and return its exit status.
 
-    0 on success, 2 for arguments or settings the agent cannot honor, found before the server
-    starts, and 1 if the model or the search tool failed.
+    0 on success, 2 for arguments or settings the agent cannot honor, and 1 if the model, the
+    search tool, or the database holding paused runs failed.
     """
     args = build_parser().parse_args(argv)
     try:
@@ -224,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             outcome = asyncio.run(answer_question(args.question, settings, config))
-    except (GenerationError, SearchError) as error:
+    except (GenerationError, SearchError, CheckpointError) as error:
         print(f"study-ask: {error}", file=sys.stderr)
         return FAILURE
     except ValueError as error:

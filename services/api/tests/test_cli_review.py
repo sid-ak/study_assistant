@@ -12,6 +12,7 @@ import pytest
 from api import cli
 from api.config import ApiSettings
 from api.graph import AgentAnswer, AgentConfig, AgentOutcome, PendingReview, PendingSource
+from api.graph.checkpoint import CheckpointError
 from api.mcp_client import SearchHit
 
 THREAD = "0f9c2b1e"
@@ -288,6 +289,20 @@ def test_the_approval_flow_without_a_database_is_a_usage_error(
     assert "DATABASE_URL" in capsys.readouterr().err
     assert calls.started == []
     assert calls.resumed == []
+
+
+def test_a_database_that_cannot_be_reached_is_reported_on_stderr(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], saved_runs: None
+) -> None:
+    """A database that is down exits 1 with a one-line message, like any other failed dependency."""
+    replace_review_flow(
+        monkeypatch, CheckpointError("The database holding paused runs could not be reached.")
+    )
+
+    status = cli.main(["Which flag?", "--review"])
+
+    assert status == cli.FAILURE
+    assert "paused runs" in capsys.readouterr().err
 
 
 def test_resuming_a_thread_that_is_not_paused_is_a_usage_error(

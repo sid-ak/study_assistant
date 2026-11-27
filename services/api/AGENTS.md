@@ -20,9 +20,12 @@ bounded agent (0012).
   `uuid4().hex` unless one is given.
 - `study-ask --resume <thread-id> (--approve | --reject)`: carries the decision to the saved run
   and prints its answer, or the next checkpoint when a rejection searched again. Needs
-  `DATABASE_URL`, and exits 2 before starting anything for a thread id that is not waiting for a
-  decision, a resume without a decision, a decision without a resume, a question together with a
-  resume, or neither.
+  `DATABASE_URL`. Exits 2 before anything starts for a resume without a decision, a decision
+  without a resume, a question together with a resume, neither of them, a `--thread-id` without
+  `--review`, and the approval flow without `DATABASE_URL`. A thread id that no paused run answers
+  to also exits 2, but only once the search server and the saver are open, since the check reads
+  the saved state through the compiled graph. A database that cannot be reached exits 1 with one
+  line, like a failed model request.
 - `api.graph`: `build_graph(search, generator, config=..., checkpointer=None)` compiles the agent,
   and `ask(graph, question, thread_id=None)` runs it and returns an `AgentAnswer` (status, answer,
   cited chunk ids, the resolved citations, the context shown to the model, queries, hops).

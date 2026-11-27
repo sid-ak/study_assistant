@@ -20,7 +20,7 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from resume_child import CHILD_ANSWER
 
 from api.graph import APPROVE, AgentAnswer, AgentConfig, PendingReview, build_graph, resume, start
-from api.graph.checkpoint import checkpoint_serializer, postgres_checkpointer
+from api.graph.checkpoint import CheckpointError, checkpoint_serializer, postgres_checkpointer
 from api.mcp_client import SearchHit
 
 QUESTION = "Which Bazel flag runs tests under AddressSanitizer?"
@@ -111,6 +111,18 @@ def test_a_checkpointer_without_a_database_url_is_refused(url: str) -> None:
             pass
 
     with pytest.raises(ValueError, match="database"):
+        asyncio.run(open_it())
+
+
+def test_a_database_that_cannot_be_reached_is_reported_not_raised_raw() -> None:
+    """A database that is down ends the command with one line, not a psycopg traceback."""
+
+    async def open_it() -> None:
+        # Port 1 on the loopback interface refuses at once; nothing is listening there.
+        async with postgres_checkpointer("postgresql://study:x@127.0.0.1:1/study_assistant"):
+            pass
+
+    with pytest.raises(CheckpointError, match="paused runs"):
         asyncio.run(open_it())
 
 
