@@ -27,13 +27,18 @@ class SearchError(Exception):
 
 @dataclass(frozen=True)
 class SearchHit:
-    """One chunk the search tool returned: its id, location, text, and cosine distance."""
+    """One chunk the search tool returned: its id, location, text, distance, and relevance.
+
+    ``relevance`` is what the server ranked by: the reranker's score from 0 to 1 when it reranks,
+    otherwise the cosine similarity, 1 minus ``distance``.
+    """
 
     id: str
     document: str
     section: str
     content: str
     distance: float
+    relevance: float
 
 
 @runtime_checkable
@@ -97,6 +102,7 @@ class McpSearchClient:
                         section=str(record["section"]),
                         content=str(record["content"]),
                         distance=float(record["distance"]),
+                        relevance=float(record["relevance"]),
                     )
                 )
         except (KeyError, TypeError, ValueError) as error:

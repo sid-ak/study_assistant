@@ -36,7 +36,8 @@ class AgentConfig:
 
     # Searches per run, counting the first. Two allows one rewrite.
     max_hops: int = 2
-    # The top hit's cosine similarity (1 minus distance) needed to call the context relevant.
+    # The top hit's relevance needed to call the context relevant: the reranker's score, from 0 to
+    # 1, when the search reranks, otherwise the cosine similarity.
     relevance_threshold: float = 0.65
     # Chunks per search, which are also the chunks the answer step sees.
     search_limit: int = 5
@@ -92,18 +93,19 @@ class AgentNodes:
         return {"hits": hits, "hops": state.get("hops", 0) + 1, "queries": queries}
 
     async def grade_relevance(self, state: AgentState) -> AgentState:
-        """Call the hits relevant when the nearest one is similar enough to the query.
+        """Call the hits relevant when the best one's relevance clears the threshold.
 
-        No model request: the grade is the top hit's cosine similarity, 1 minus its distance,
-        against ``relevance_threshold``. No hits at all is not relevant.
+        No model request: the grade is the top hit's relevance as the search reported it, the
+        reranker's score when the server reranks and the cosine similarity otherwise, against
+        ``relevance_threshold``. No hits at all is not relevant.
         """
         hits = state["hits"]
-        best_similarity = 0.0
+        best_relevance = 0.0
         if hits:
-            # Hits arrive nearest first, so the first has the highest similarity.
-            best_similarity = 1.0 - hits[0].distance
+            # Hits arrive ordered by relevance, so the first is the best.
+            best_relevance = hits[0].relevance
         # With no hits there is nothing to answer from, whatever the threshold.
-        relevant = bool(hits) and best_similarity >= self.config.relevance_threshold
+        relevant = bool(hits) and best_relevance >= self.config.relevance_threshold
         return {"relevant": relevant, "context": hits}
 
     def route(self, state: AgentState) -> str:

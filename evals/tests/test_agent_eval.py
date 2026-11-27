@@ -18,8 +18,10 @@ from evals.agent import AgentEvalRun, is_grounded, run_agent_eval
 from evals.golden import ExpectedSection, GoldenQuestion
 from evals.runner import write_run
 
-CACHING = SearchHit("chunk-caching", "build.md", "Build > Caching", "ccache stores objects.", 0.2)
-PRESETS = SearchHit("chunk-presets", "build.md", "Build > Presets", "Run cmake --preset.", 0.4)
+CACHING = SearchHit(
+    "chunk-caching", "build.md", "Build > Caching", "ccache stores objects.", 0.2, 0.8
+)
+PRESETS = SearchHit("chunk-presets", "build.md", "Build > Presets", "Run cmake --preset.", 0.4, 0.6)
 
 
 def question(question_id: str) -> GoldenQuestion:

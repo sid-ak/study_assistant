@@ -51,6 +51,7 @@ def test_search_returns_typed_hits_nearest_first(server: MCPServer) -> None:
     assert hits[0].section == "Build > Caching"
     assert "ccache stores compiled objects." in hits[0].content
     assert hits[0].distance <= hits[1].distance
+    assert hits[0].relevance == pytest.approx(1.0 - hits[0].distance)
     assert len(hits[0].id) == 36
 
 
