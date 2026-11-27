@@ -24,8 +24,8 @@ bounded agent (0012).
   without a resume, a question together with a resume, neither of them, a `--thread-id` without
   `--review`, and the approval flow without `DATABASE_URL`. A thread id that no paused run answers
   to also exits 2, but only once the search server and the saver are open, since the check reads
-  the saved state through the compiled graph. A database that cannot be reached exits 1 with one
-  line, like a failed model request.
+  the saved state through the compiled graph. A database that fails, when it refuses the connection or
+  during the run, exits 1 with one line, like a failed model request.
 - `api.graph`: `build_graph(search, generator, config=..., checkpointer=None)` compiles the agent,
   and `ask(graph, question, thread_id=None)` runs it and returns an `AgentAnswer` (status, answer,
   cited chunk ids, the resolved citations, the context shown to the model, queries, hops).
@@ -85,5 +85,8 @@ bounded agent (0012).
     `checkpoint_serializer()`, with a test.
   - Integration tests save to `TEST_DATABASE_URL` through the `checkpoint_database_url` fixture in
     `tests/conftest.py`, which drops the checkpoint tables afterwards.
+- Every third-party module imported under `src/api` is declared in this package's own
+  `dependencies`, not taken from another package's requirements.
+  `tests/test_declared_dependencies.py` fails on one that is not.
 - Fakes live in `tests/api_fakes.py`: `ScriptedGenerator` replays prepared replies and records
   requests, and `FakeSearchClient` answers queries with prepared hits.
