@@ -203,9 +203,9 @@ def run_query(text: str, limit: int, ef_search: int | None, components: Componen
         ef_text = str(ef_search)
     reranked_text = ""
     if components.reranker is not None:
+        # The count retrieve actually used, which it widens to the limit when that is larger.
         reranked_text = (
-            f", reranked by {components.reranker.model_id} "
-            f"from {components.rerank_candidates} candidates"
+            f", reranked by {components.reranker.model_id} from {result.candidates} candidates"
         )
     print(
         f"{len(result.chunks)} results in {result.latency_ms:.1f} ms "

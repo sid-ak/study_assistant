@@ -35,12 +35,14 @@ class RetrievalResult:
     """The ranked chunks for one query, most relevant first, and how long retrieval took.
 
     ``latency_ms`` covers the whole call; ``rerank_latency_ms`` is the reranking step's share of
-    it, 0 when there was no reranker.
+    it, 0 when there was no reranker, and ``candidates`` is how many chunks the reranker scored.
     """
 
     chunks: list[RetrievedChunk]
     latency_ms: float
     rerank_latency_ms: float = 0.0
+    # How many dense candidates the reranker scored, after widening to the limit; None without one.
+    candidates: int | None = None
 
 
 def search(
@@ -118,6 +120,7 @@ def retrieve(
     # The reranker can only return chunks it was given, so fetch at least ``limit`` of them.
     candidates = max(candidates, limit)
     started = time.perf_counter()
+    used_candidates = None
     if reranker is None:
         chunks = search(query, embedder=embedder, store=store, limit=limit, ef_search=ef_search)
         rerank_latency_ms = 0.0
@@ -126,7 +129,11 @@ def retrieve(
         rerank_started = time.perf_counter()
         chunks = rerank(query, found, reranker=reranker, limit=limit)
         rerank_latency_ms = (time.perf_counter() - rerank_started) * 1000.0
+        used_candidates = candidates
     latency_ms = (time.perf_counter() - started) * 1000.0
     return RetrievalResult(
-        chunks=chunks, latency_ms=latency_ms, rerank_latency_ms=rerank_latency_ms
+        chunks=chunks,
+        latency_ms=latency_ms,
+        rerank_latency_ms=rerank_latency_ms,
+        candidates=used_candidates,
     )

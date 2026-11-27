@@ -157,6 +157,7 @@ def test_without_a_reranker_relevance_is_the_cosine_similarity(
     for chunk in result.chunks:
         assert chunk.relevance == pytest.approx(1.0 - chunk.distance)
     assert result.rerank_latency_ms == 0.0
+    assert result.candidates is None
 
 
 def test_a_reranker_rescores_the_candidates_and_keeps_the_top_limit(
@@ -212,6 +213,7 @@ def test_fewer_candidates_than_results_are_widened_to_the_limit(
 
     assert len(result.chunks) == 3
     assert len(reranker.calls[0][1]) == 3
+    assert result.candidates == 3
 
 
 def test_search_and_rerank_are_separate_steps(hashing_store: StoreProtocol) -> None:

@@ -157,4 +157,6 @@ def test_a_limit_above_the_candidates_widens_them(
     monkeypatch.setattr(cli_main, "build_components", build_reranked)
 
     assert main(["query", "pthread cmake", "--limit", "2"]) == 0
-    assert len(RESULT_LINE.findall(capsys.readouterr().out)) == 2
+    output = capsys.readouterr().out
+    assert len(RESULT_LINE.findall(output)) == 2
+    assert "from 2 candidates" in output
