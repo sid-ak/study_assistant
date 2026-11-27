@@ -71,6 +71,7 @@ mypy_path = [
     "evals/src",
     "services/mcp_server/src",
     "services/api/src",
+    "services/api/tests",
 ]
 files = [
     "packages/rag_core/src",

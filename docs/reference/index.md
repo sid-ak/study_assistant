@@ -200,3 +200,35 @@
    :members:
    :show-inheritance:
 ```
+
+## api.config
+
+```{eval-rst}
+.. automodule:: api.config
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.protocol
+
+```{eval-rst}
+.. automodule:: api.generate.protocol
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.openai_compatible
+
+```{eval-rst}
+.. automodule:: api.generate.openai_compatible
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.errors
+
+```{eval-rst}
+.. automodule:: api.generate.errors
+   :members:
+   :show-inheritance:
+```
