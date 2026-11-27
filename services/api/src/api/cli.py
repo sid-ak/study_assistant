@@ -12,6 +12,8 @@ from api.mcp_client import McpSearchClient, SearchError, stdio_server
 
 # Exit status when the model or the search tool failed.
 FAILURE = 1
+# Exit status for settings the agent cannot honor, as argparse uses for bad arguments.
+USAGE_ERROR = 2
 
 
 def agent_config(settings: ApiSettings) -> AgentConfig:
@@ -23,15 +25,15 @@ def agent_config(settings: ApiSettings) -> AgentConfig:
     )
 
 
-async def answer_question(question: str, settings: ApiSettings) -> AgentAnswer:
-    """Start the MCP server, run the agent on ``question``, and stop the server.
+async def answer_question(question: str, settings: ApiSettings, config: AgentConfig) -> AgentAnswer:
+    """Start the MCP server, run the agent on ``question`` within ``config``, and stop the server.
 
     The server is started in the current folder, so it reads the same ``.env`` as this command.
     """
     generator = OpenAICompatibleGenerator.from_settings(settings)
     server = stdio_server(settings.mcp_server_command, Path.cwd())
     async with McpSearchClient(server) as search:
-        graph = build_graph(search, generator, config=agent_config(settings))
+        graph = build_graph(search, generator, config=config)
         return await ask(graph, question)
 
 
@@ -61,10 +63,20 @@ def print_answer(result: AgentAnswer) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run ``study-ask`` and return its exit status: 0, or 1 if the model or search failed."""
+    """Run ``study-ask`` and return its exit status.
+
+    0 on success, 2 for settings the agent cannot honor, found before the server starts, and 1 if
+    the model or the search tool failed.
+    """
     args = build_parser().parse_args(argv)
     try:
-        result = asyncio.run(answer_question(args.question, ApiSettings()))
+        settings = ApiSettings()
+        config = agent_config(settings)
+    except ValueError as error:
+        print(f"study-ask: {error}", file=sys.stderr)
+        return USAGE_ERROR
+    try:
+        result = asyncio.run(answer_question(args.question, settings, config))
     except (GenerationError, SearchError) as error:
         print(f"study-ask: {error}", file=sys.stderr)
         return FAILURE

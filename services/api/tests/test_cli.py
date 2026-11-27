@@ -41,7 +41,7 @@ def replace_agent(monkeypatch: pytest.MonkeyPatch, result: AgentAnswer | Excepti
     """Make ``study-ask`` return ``result`` (or raise it) instead of running the agent."""
     asked: list[str] = []
 
-    async def fake_answer(question: str, settings: ApiSettings) -> AgentAnswer:
+    async def fake_answer(question: str, settings: ApiSettings, config: AgentConfig) -> AgentAnswer:
         """Record the question and return the canned result."""
         asked.append(question)
         if isinstance(result, Exception):
@@ -107,3 +107,17 @@ def test_agent_settings_come_from_the_environment(
     config = cli.agent_config(ApiSettings())
 
     assert config == AgentConfig(max_hops=2, relevance_threshold=0.7, search_limit=5)
+
+
+def test_an_invalid_agent_setting_is_a_usage_error_before_anything_starts(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A setting the agent cannot honor exits 2 with one line, before the server starts."""
+    asked = replace_agent(monkeypatch, ANSWERED)
+    monkeypatch.setenv("AGENT_SEARCH_LIMIT", "25")
+
+    status = cli.main(["Which flag?"])
+
+    assert status == cli.USAGE_ERROR
+    assert "search_limit" in capsys.readouterr().err
+    assert asked == []
