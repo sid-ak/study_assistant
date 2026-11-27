@@ -14,6 +14,15 @@ bounded agent (0012).
   message, then the searches made. Exits 1 with a one-line message if the model or the search
   tool fails. Bounds come from `AGENT_MAX_HOPS`, `AGENT_RELEVANCE_THRESHOLD`, and
   `AGENT_SEARCH_LIMIT`.
+- `study-ask "<question>" --review [--thread-id <id>]`: stops at the approval checkpoint instead
+  of answering, and prints the query searched, each pending source with the relevance it was
+  ranked by, the thread id, and the two commands that continue the run. The thread id is a fresh
+  `uuid4().hex` unless one is given.
+- `study-ask --resume <thread-id> (--approve | --reject)`: carries the decision to the saved run
+  and prints its answer, or the next checkpoint when a rejection searched again. Needs
+  `DATABASE_URL`, and exits 2 before starting anything for a thread id that is not waiting for a
+  decision, a resume without a decision, a decision without a resume, a question together with a
+  resume, or neither.
 - `api.graph`: `build_graph(search, generator, config=..., checkpointer=None)` compiles the agent,
   and `ask(graph, question, thread_id=None)` runs it and returns an `AgentAnswer` (status, answer,
   cited chunk ids, the resolved citations, the context shown to the model, queries, hops).
@@ -21,7 +30,7 @@ bounded agent (0012).
   thread_id=...)` runs until the sources need a decision and `resume(graph, decision,
   thread_id=...)` continues that run with `APPROVE` or `REJECT`. Both return an `AgentOutcome`:
   an `AgentAnswer`, or a `PendingReview` (thread id, question, query, hops, and the sources as
-  `PendingSource` records of id, document, and section).
+  `PendingSource` records of id, document, section, and the relevance they were ranked by).
 - `api.graph.checkpoint`: `postgres_checkpointer(database_url)`, an async context manager over
   LangGraph's `AsyncPostgresSaver` that creates its own checkpoint tables on first use, and
   `checkpoint_serializer()`, the serializer it uses.

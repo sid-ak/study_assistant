@@ -84,6 +84,8 @@ def test_a_run_that_needs_approval_pauses_after_grading() -> None:
     assert [source.id for source in outcome.sources] == ["chunk-asan", "chunk-other"]
     assert outcome.sources[0].document == "build_systems/bazel-basics.md"
     assert outcome.sources[0].section == "Bazel basics > Configs in .bazelrc"
+    # The relevance the search ranked by, so a person can see how sure it was.
+    assert outcome.sources[0].relevance == pytest.approx(0.80)
     # The answer step is after the checkpoint, so nothing has been generated yet.
     assert generator.requests == []
 

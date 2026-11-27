@@ -12,11 +12,16 @@ REJECT = "reject"
 
 @dataclass(frozen=True)
 class PendingSource:
-    """One retrieved chunk awaiting a decision: enough to recognize it, without its text."""
+    """One retrieved chunk awaiting a decision: enough to recognize it, without its text.
+
+    ``relevance`` is what the search ranked it by, which is also what the relevance grade was
+    taken from: the reranker's score when the search reranks, otherwise the cosine similarity.
+    """
 
     id: str
     document: str
     section: str
+    relevance: float
 
 
 @dataclass(frozen=True)
@@ -41,9 +46,16 @@ def review_payload(state: AgentState) -> dict[str, Any]:
     Only plain values: the payload is saved with the run and read back by whatever resumes it,
     which may be another process that has no classes of ours loaded.
     """
-    sources: list[dict[str, str]] = []
+    sources: list[dict[str, Any]] = []
     for hit in state["hits"]:
-        sources.append({"id": hit.id, "document": hit.document, "section": hit.section})
+        sources.append(
+            {
+                "id": hit.id,
+                "document": hit.document,
+                "section": hit.section,
+                "relevance": hit.relevance,
+            }
+        )
     return {
         "question": state["question"],
         "query": state["query"],
@@ -59,7 +71,12 @@ def review_from_payload(payload: Any, thread_id: str) -> PendingReview:
     sources: list[PendingSource] = []
     for source in payload["sources"]:
         sources.append(
-            PendingSource(id=source["id"], document=source["document"], section=source["section"])
+            PendingSource(
+                id=source["id"],
+                document=source["document"],
+                section=source["section"],
+                relevance=source["relevance"],
+            )
         )
     return PendingReview(
         thread_id=thread_id,
