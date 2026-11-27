@@ -57,6 +57,14 @@
    :show-inheritance:
 ```
 
+## rag_core.embed.backfill
+
+```{eval-rst}
+.. automodule:: rag_core.embed.backfill
+   :members:
+   :show-inheritance:
+```
+
 ## rag_core.embed.binding
 
 ```{eval-rst}
@@ -149,6 +157,38 @@
 
 ```{eval-rst}
 .. automodule:: study_cli.main
+   :members:
+   :show-inheritance:
+```
+
+## evals.golden
+
+```{eval-rst}
+.. automodule:: evals.golden
+   :members:
+   :show-inheritance:
+```
+
+## evals.metrics
+
+```{eval-rst}
+.. automodule:: evals.metrics
+   :members:
+   :show-inheritance:
+```
+
+## evals.runner
+
+```{eval-rst}
+.. automodule:: evals.runner
+   :members:
+   :show-inheritance:
+```
+
+## evals.main
+
+```{eval-rst}
+.. automodule:: evals.main
    :members:
    :show-inheritance:
 ```

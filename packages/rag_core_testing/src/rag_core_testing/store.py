@@ -16,8 +16,13 @@ from uuid import UUID
 
 from rag_core.config import settings
 from rag_core.store.embedders import EmbedderInfo
-from rag_core.store.errors import DuplicateIdError, MissingDocumentError
-from rag_core.store.validation import check_dimensions, check_search
+from rag_core.store.errors import DuplicateIdError, MissingChunkError, MissingDocumentError
+from rag_core.store.validation import (
+    check_dimensions,
+    check_limit,
+    check_search,
+    check_unique_ids,
+)
 
 
 def cosine_distance(a: Sequence[float], b: Sequence[float]) -> float:
@@ -148,6 +153,30 @@ class InMemoryStore:
             for c in self.chunks.values()
             if c["document_id"] == document_id
         ]
+
+    def get_unembedded_chunks(self, limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks with no vector from this store's model, in added order."""
+        check_limit(limit)
+        rows: list[dict[str, Any]] = []
+        # Dicts keep insertion order, which mirrors the database's seq column.
+        for chunk in self.chunks.values():
+            if self.embedder.model_id not in chunk["embeddings"]:
+                rows.append({"id": chunk["id"], "content": chunk["content"]})
+                if len(rows) == limit:
+                    break
+        return rows
+
+    def set_embeddings(self, embeddings: list[dict[str, Any]]) -> None:
+        """Set each chunk's vector for this store's model, after checking the whole batch."""
+        check_dimensions(embeddings, self.embedder)
+        check_unique_ids(embeddings)
+        # Every id is checked before any write, so a bad batch leaves nothing behind, as the
+        # database's single transaction does.
+        for row in embeddings:
+            if row["id"] not in self.chunks:
+                raise MissingChunkError(f"No stored chunk has id {row['id']}.")
+        for row in embeddings:
+            self.chunks[row["id"]]["embeddings"][self.embedder.model_id] = list(row["embedding"])
 
     def search_dense(
         self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None

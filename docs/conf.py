@@ -16,6 +16,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "packages" / "rag_core" / "src"))
 sys.path.insert(0, str(REPO_ROOT / "cli" / "src"))
+sys.path.insert(0, str(REPO_ROOT / "evals" / "src"))
 
 project = "Study Assistant"
 author = "Sid Anandkumar"

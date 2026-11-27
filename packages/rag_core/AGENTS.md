@@ -12,10 +12,10 @@ per-model embedding columns (0008).
 
 ## Known drift from ADRs
 
-ADR 0008 (per-model embedding columns) is implemented except for its migration tail: re-embedding
-existing chunks into a new model's column and dropping the old column are not built yet. That work
-is tracked in [issue #15](https://github.com/sid-ak/study_assistant/issues/15). Until it lands, a
-newly registered embedder only has embeddings for chunks written after it became current.
+ADR 0008 (per-model embedding columns) is implemented except for the last step of a model switch:
+dropping the old model's column. Filling a newly registered model's column for chunks that already
+exist is built (`embed_missing`, run by `study embed`). Dropping a column is still tracked in
+[issue #15](https://github.com/sid-ak/study_assistant/issues/15).
 
 ## Store conventions
 

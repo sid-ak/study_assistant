@@ -8,6 +8,7 @@ from typing import Any
 
 from rag_core.store.embedders.protocol import EmbedderInfo
 from rag_core.store.errors import (
+    DuplicateIdError,
     EmbeddingDimensionError,
     UnsupportedDimensionError,
     ZeroEmbeddingError,
@@ -54,8 +55,7 @@ def check_search(
     given, must be 1 to ``MAX_EF_SEARCH`` and at least ``limit``, because an approximate search
     returns no more results than the candidates it keeps.
     """
-    if limit < 1:
-        raise ValueError(f"limit must be at least 1, not {limit}.")
+    check_limit(limit)
     if ef_search is not None:
         if ef_search < 1 or ef_search > MAX_EF_SEARCH:
             raise ValueError(f"ef_search must be 1 to {MAX_EF_SEARCH}, not {ef_search}.")
@@ -65,6 +65,21 @@ def check_search(
                 "or the search returns fewer results than asked for."
             )
     check_embedding(query_embedding, embedder, "The query")
+
+
+def check_limit(limit: int) -> None:
+    """Raise ``ValueError`` unless ``limit``, a most-rows-to-return count, is at least one."""
+    if limit < 1:
+        raise ValueError(f"limit must be at least 1, not {limit}.")
+
+
+def check_unique_ids(rows: Sequence[dict[str, Any]]) -> None:
+    """Raise ``DuplicateIdError`` if two of ``rows`` share an ``id``."""
+    seen: set[Any] = set()
+    for row in rows:
+        if row["id"] in seen:
+            raise DuplicateIdError(f"Id {row['id']} appears more than once in the batch.")
+        seen.add(row["id"])
 
 
 def check_embedder_dimension(model_id: str, dimension: int) -> None:

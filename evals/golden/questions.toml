@@ -1,0 +1,78 @@
+# The golden set: questions over corpus/release_engineering/, each labeled with the sections that
+# answer it. A label names a document, by its path under corpus/release_engineering/, and a heading
+# in it. A retrieved chunk matches a label when it comes from that document and lies inside that
+# heading's section. See evals/AGENTS.md.
+
+[[questions]]
+id = "bazel-asan"
+text = "How do I run every test under AddressSanitizer with Bazel?"
+expected = [
+    { document = "build_systems/bazel-basics.md", section = "Configs in .bazelrc" },
+]
+
+[[questions]]
+id = "error-e1050"
+text = "What does error E1050 mean?"
+expected = [
+    { document = "releases/orbit-5.0.md", section = "New features" },
+]
+
+[[questions]]
+id = "pthread-oldest-linux"
+text = "Why does linking fail with undefined reference to pthread_create only on the oldest Linux image?"
+expected = [
+    { document = "ci/undefined-reference-pthread-create.md", section = "Cause" },
+]
+
+[[questions]]
+id = "linker-out-of-memory"
+text = "Linking test binaries runs out of memory on CI. How can the number of simultaneous links be limited?"
+expected = [
+    { document = "ci/linker-killed-exit-code-137.md", section = "Fix" },
+]
+
+[[questions]]
+id = "openssl-homebrew"
+text = "CMake cannot find the OpenSSL that Homebrew installed on a Mac. What should the configure step pass?"
+expected = [
+    { document = "ci/openssl-not-found-macos.md", section = "Fix" },
+    { document = "build_systems/cmake-dependencies.md", section = "find_package and CMAKE_PREFIX_PATH" },
+]
+
+[[questions]]
+id = "workers-flag-replacement"
+text = "Which option replaces --orbit-workers?"
+expected = [
+    { document = "releases/orbit-4.1.md", section = "Deprecations" },
+    { document = "releases/orbit-5.0.md", section = "Breaking changes" },
+]
+
+[[questions]]
+id = "aarch64-tests"
+text = "How are aarch64 tests run on x86_64 CI runners?"
+expected = [
+    { document = "build_systems/cmake-cross-compiling.md", section = "Running tests" },
+]
+
+[[questions]]
+id = "remote-cache-outage"
+text = "What happens to a build when the remote cache cannot be reached?"
+expected = [
+    { document = "build_systems/bazel-remote-cache.md", section = "When the cache is unreachable" },
+    { document = "ci/bazel-remote-cache-unavailable.md", section = "Cause" },
+]
+
+[[questions]]
+id = "cmake-minimum-5-0"
+text = "What CMake version does Orbit 5.0 require?"
+expected = [
+    { document = "releases/orbit-5.0.md", section = "Breaking changes" },
+    { document = "ci/cmake-version-too-old.md", section = "Cause" },
+]
+
+[[questions]]
+id = "slow-benchmarks"
+text = "Benchmarks built with Ninja are unexpectedly slow and no build type was chosen. Why?"
+expected = [
+    { document = "build_systems/cmake-presets.md", section = "Build types" },
+]

@@ -16,10 +16,16 @@ from rag_core.store.embedders import EmbedderInfo
 from rag_core.store.errors import (
     DuplicateIdError,
     EmbedderNotFoundError,
+    MissingChunkError,
     MissingDocumentError,
 )
 from rag_core.store.schema import SCHEMA_SQL, embedding_column
-from rag_core.store.validation import check_dimensions, check_search
+from rag_core.store.validation import (
+    check_dimensions,
+    check_limit,
+    check_search,
+    check_unique_ids,
+)
 
 
 class Store:
@@ -161,6 +167,34 @@ class Store:
                 "FROM chunks WHERE document_id = %s ORDER BY seq"
             ).format(column)
             return conn.execute(query, (document_id,)).fetchall()
+
+    def get_unembedded_chunks(self, limit: int) -> list[dict[str, Any]]:
+        """Return up to ``limit`` chunks whose column for this store's embedder is still NULL.
+
+        Rows are ``{id, content}`` ordered by ``seq``, the order the chunks were added.
+        """
+        check_limit(limit)
+        with self.get_connection() as conn, self._embedder_column() as column:
+            query = sql.SQL(
+                "SELECT id, content FROM chunks WHERE {} IS NULL ORDER BY seq LIMIT %s"
+            ).format(column)
+            return conn.execute(query, (limit,)).fetchall()
+
+    def set_embeddings(self, embeddings: list[dict[str, Any]]) -> None:
+        """Write each ``{id, embedding}`` into this store's embedder's column, in one transaction.
+
+        Each row is one ``UPDATE``; a row that updates nothing names no chunk, and raising inside
+        the connection's ``with`` block rolls back the rows already updated.
+        """
+        check_dimensions(embeddings, self.embedder)
+        check_unique_ids(embeddings)
+        with self.get_connection() as conn, self._embedder_column() as column:
+            update = sql.SQL("UPDATE chunks SET {} = %s WHERE id = %s").format(column)
+            for row in embeddings:
+                # Vector binds as pgvector's own type, as in search_dense.
+                cursor = conn.execute(update, (Vector(list(row["embedding"])), row["id"]))
+                if cursor.rowcount == 0:
+                    raise MissingChunkError(f"No stored chunk has id {row['id']}.")
 
     def search_dense(
         self, query_embedding: Sequence[float], limit: int, ef_search: int | None = None

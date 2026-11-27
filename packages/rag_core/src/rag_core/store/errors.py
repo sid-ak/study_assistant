@@ -13,6 +13,10 @@ class MissingDocumentError(StoreError):
     """A chunk references a ``document_id`` that has no document."""
 
 
+class MissingChunkError(StoreError):
+    """A chunk id names no stored chunk."""
+
+
 class EmbedderNotFoundError(StoreError):
     """The named embedder is not registered."""
 

@@ -4,8 +4,9 @@ An embedder turns text into fixed-length vectors. Its ``info`` names the model a
 is what a store is bound to, so vectors always land in the column of the model that made them.
 """
 
+from rag_core.embed.backfill import embed_missing
 from rag_core.embed.fastembed_embedder import FastembedEmbedder
 from rag_core.embed.protocol import EmbedderProtocol
 from rag_core.embed.registration import register_embedder
 
-__all__ = ["EmbedderProtocol", "FastembedEmbedder", "register_embedder"]
+__all__ = ["EmbedderProtocol", "FastembedEmbedder", "embed_missing", "register_embedder"]
