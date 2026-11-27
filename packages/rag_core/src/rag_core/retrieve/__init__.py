@@ -4,6 +4,22 @@
 and the time the whole search took.
 """
 
-from rag_core.retrieve.dense import RetrievalResult, RetrievedChunk, rerank, retrieve, search
+from rag_core.retrieve.dense import (
+    RetrievalResult,
+    RetrievedChunk,
+    fuse,
+    lexical_search,
+    rerank,
+    retrieve,
+    search,
+)
 
-__all__ = ["RetrievalResult", "RetrievedChunk", "rerank", "retrieve", "search"]
+__all__ = [
+    "RetrievalResult",
+    "RetrievedChunk",
+    "fuse",
+    "lexical_search",
+    "rerank",
+    "retrieve",
+    "search",
+]

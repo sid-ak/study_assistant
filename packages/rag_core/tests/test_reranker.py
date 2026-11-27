@@ -80,10 +80,12 @@ def test_an_unknown_model_is_refused_when_built() -> None:
 def test_settings_choose_the_reranker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Reranking is on by default, with the tiny jina model rescoring 20 candidates."""
     monkeypatch.chdir(tmp_path)
-    for name in ["RERANK_ENABLED", "RERANKER_MODEL", "RERANK_CANDIDATES"]:
+    for name in ["RERANK_ENABLED", "RERANKER_MODEL", "RERANK_CANDIDATES", "HYBRID_ENABLED"]:
         monkeypatch.delenv(name, raising=False)
 
     settings = Settings()
+
+    assert settings.hybrid_enabled is False
 
     assert settings.rerank_enabled is True
     assert settings.reranker_model == "jinaai/jina-reranker-v1-tiny-en"

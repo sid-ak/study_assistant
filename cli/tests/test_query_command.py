@@ -160,3 +160,22 @@ def test_a_limit_above_the_candidates_widens_them(
     output = capsys.readouterr().out
     assert len(RESULT_LINE.findall(output)) == 2
     assert "from 2 candidates" in output
+
+
+@pytest.mark.usefixtures("ingested")
+def test_query_says_when_retrieval_is_hybrid(
+    components: cli_main.Components,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """With hybrid on, the summary says lexical search was fused in."""
+    hybrid = replace(components, hybrid=True)
+
+    def build_hybrid(settings: object) -> cli_main.Components:
+        """Return hybrid components, whatever the settings say."""
+        return hybrid
+
+    monkeypatch.setattr(cli_main, "build_components", build_hybrid)
+
+    assert main(["query", "undefined reference to pthread_create"]) == 0
+    assert "hybrid" in capsys.readouterr().out

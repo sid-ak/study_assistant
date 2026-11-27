@@ -150,3 +150,8 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   compare which chunks come back, not their order, because the two scorers rank differently.
 - Lexical search reads no embedding, so it works the same for a store bound to any model.
 
+- Hybrid retrieval (`HYBRID_ENABLED`, default off) fuses the dense and lexical pools with
+  Reciprocal Rank Fusion (`fuse`, constant 60) between `search` and `rerank`. Without a reranker a
+  fused chunk's `relevance` is its RRF score, about 0.016 to 0.033, which is not on the 0-to-1
+  scale the agent's threshold assumes, so the agent needs reranking on when hybrid is on. A chunk
+  only lexical search found has `distance` `None`.

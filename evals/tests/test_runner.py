@@ -74,7 +74,12 @@ def test_run_eval_records_the_ranked_sections(
     assert len(retrieved) == 3
     assert retrieved[0].document == "build.md"
     assert retrieved[0].section == "Build > Caching"
-    assert retrieved[0].distance <= retrieved[1].distance <= retrieved[2].distance
+    distances: list[float] = []
+    for section in retrieved:
+        # A dense run always records a distance.
+        assert section.distance is not None
+        distances.append(section.distance)
+    assert distances == sorted(distances)
 
 
 def test_run_eval_times_every_repeat_after_one_untimed_warm_up(
@@ -202,3 +207,15 @@ def test_run_eval_without_a_reranker_records_none(run: EvalRun) -> None:
     """A dense-only run says so in its saved settings."""
     assert run.reranker is None
     assert run.candidates is None
+
+
+def test_run_eval_records_hybrid_retrieval(
+    store: InMemoryStore, embedder: HashingEmbedder, caching_question: GoldenQuestion
+) -> None:
+    """A run says whether lexical search was fused in."""
+    hybrid = run_eval([caching_question], embedder=embedder, store=store, k=1, hybrid=True)
+    dense = run_eval([caching_question], embedder=embedder, store=store, k=1)
+
+    assert hybrid.hybrid is True
+    assert dense.hybrid is False
+    assert hybrid.questions[0].recall == 1.0

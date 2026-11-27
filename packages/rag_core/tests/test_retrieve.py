@@ -6,15 +6,24 @@ in for the model, so the whole path from query text to ranked chunks is exercise
 
 import time
 import uuid
+from typing import Any
 
 import pytest
 
 from rag_core.config import Settings
 from rag_core.rerank import build_reranker
-from rag_core.retrieve import RetrievalResult, RetrievedChunk, rerank, retrieve, search
+from rag_core.retrieve import (
+    RetrievalResult,
+    RetrievedChunk,
+    fuse,
+    lexical_search,
+    rerank,
+    retrieve,
+    search,
+)
 from rag_core.store import StoreProtocol
 from rag_core.store.embedders import EmbedderInfo, EmbedderRegistryProtocol
-from rag_core_testing import HASHING_EMBEDDER, HashingEmbedder
+from rag_core_testing import HASHING_EMBEDDER, HashingEmbedder, InMemoryStore
 
 DOCUMENTS = [
     "Bazel: pass --config=asan to build and test with AddressSanitizer.",
@@ -84,7 +93,11 @@ def test_results_carry_the_chunk_and_its_distance(hashing_store: StoreProtocol) 
     assert top.metadata == {"source": "notes.md", "chunk_index": 1}
     assert isinstance(top.id, uuid.UUID)
     assert isinstance(top.document_id, uuid.UUID)
-    distances = [chunk.distance for chunk in result.chunks]
+    distances: list[float] = []
+    for chunk in result.chunks:
+        # Dense results always carry a distance; only lexical-only chunks have none.
+        assert chunk.distance is not None
+        distances.append(chunk.distance)
     assert distances == sorted(distances)
     assert 0.0 <= distances[0] <= 2.0
 
@@ -155,6 +168,7 @@ def test_without_a_reranker_relevance_is_the_cosine_similarity(
     result = retrieve("asan bazel", embedder=HashingEmbedder(), store=hashing_store, limit=3)
 
     for chunk in result.chunks:
+        assert chunk.distance is not None
         assert chunk.relevance == pytest.approx(1.0 - chunk.distance)
     assert result.rerank_latency_ms == 0.0
     assert result.candidates is None
@@ -237,3 +251,146 @@ def test_build_reranker_follows_the_setting() -> None:
     reranker = build_reranker(Settings(rerank_enabled=True))
     assert reranker is not None
     assert reranker.model_id == "jinaai/jina-reranker-v1-tiny-en"
+
+
+def chunk_for(text: str, distance: float | None, relevance: float) -> RetrievedChunk:
+    """A retrieved chunk for ``text`` with an id derived from it, so equal texts share an id."""
+    return RetrievedChunk(
+        id=uuid.uuid5(uuid.NAMESPACE_URL, text),
+        document_id=uuid.uuid5(uuid.NAMESPACE_URL, "doc"),
+        content=text,
+        metadata={"source": "notes.md"},
+        distance=distance,
+        relevance=relevance,
+    )
+
+
+def test_fuse_adds_reciprocal_ranks_across_lists() -> None:
+    """Each chunk scores 1 / (60 + rank) in every list it is in; the sums decide the order."""
+    a = chunk_for("a", 0.1, 0.9)
+    b = chunk_for("b", 0.2, 0.8)
+    c = chunk_for("c", 0.3, 0.7)
+    c_lexical = chunk_for("c", None, 2.0)
+    a_lexical = chunk_for("a", None, 1.0)
+
+    fused = fuse([[a, b, c], [c_lexical, a_lexical]], limit=3)
+
+    assert [chunk.content for chunk in fused] == ["a", "c", "b"]
+    assert fused[0].relevance == pytest.approx(1 / 61 + 1 / 62)
+    assert fused[1].relevance == pytest.approx(1 / 63 + 1 / 61)
+    assert fused[2].relevance == pytest.approx(1 / 62)
+
+
+def test_fuse_keeps_the_dense_distance_when_a_chunk_has_one() -> None:
+    """A chunk found by both searches keeps its distance; one found only by words has none."""
+    dense = [chunk_for("a", 0.1, 0.9)]
+    lexical = [chunk_for("a", None, 1.0), chunk_for("z", None, 0.5)]
+
+    fused = fuse([dense, lexical], limit=2)
+
+    distances = {}
+    for chunk in fused:
+        distances[chunk.content] = chunk.distance
+    assert distances == {"a": 0.1, "z": None}
+
+
+def test_fuse_breaks_ties_by_first_appearance() -> None:
+    """Equal fused scores keep the order of the lists, then the ranks, they first appeared in."""
+    fused = fuse([[chunk_for("x", 0.1, 0.9)], [chunk_for("z", None, 1.0)]], limit=2)
+
+    assert [chunk.content for chunk in fused] == ["x", "z"]
+
+
+class LexicalStubStore(InMemoryStore):
+    """An in-memory store whose lexical search returns prepared rows, whatever the query."""
+
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        """Answer every lexical search with ``rows``."""
+        super().__init__(embedder=HASHING_EMBEDDER)
+        self.rows = rows
+        self.lexical_queries: list[str] = []
+
+    def search_lexical(self, query: str, limit: int) -> list[dict[str, Any]]:
+        """Record the query and return the prepared rows, at most ``limit``."""
+        self.lexical_queries.append(query)
+        return self.rows[:limit]
+
+
+@pytest.fixture
+def hybrid_store() -> LexicalStubStore:
+    """Three stored chunks; lexical search always returns only the third, the release note."""
+    store = LexicalStubStore([])
+    doc_id = uuid.uuid4()
+    store.add_document(id=doc_id, filename="notes.md", file_hash="notes")
+    vectors = HashingEmbedder().embed_documents(DOCUMENTS)
+    rows = []
+    for index, (text, vector) in enumerate(zip(DOCUMENTS, vectors, strict=True)):
+        rows.append(
+            {
+                "id": uuid.uuid4(),
+                "document_id": doc_id,
+                "content": text,
+                "metadata": {"source": "notes.md", "chunk_index": index},
+                "embedding": vector,
+            }
+        )
+    store.add_chunks(rows)
+    release = rows[2]
+    store.rows = [
+        {
+            "id": release["id"],
+            "document_id": doc_id,
+            "content": release["content"],
+            "metadata": release["metadata"],
+            "score": 0.5,
+        }
+    ]
+    return store
+
+
+def test_hybrid_retrieval_adds_what_only_lexical_search_found(
+    hybrid_store: LexicalStubStore,
+) -> None:
+    """With hybrid on, a chunk dense search ranked out of the list is fused back in."""
+    dense_only = retrieve(
+        "bazel asan cmake", embedder=HashingEmbedder(), store=hybrid_store, limit=2
+    )
+    hybrid = retrieve(
+        "bazel asan cmake", embedder=HashingEmbedder(), store=hybrid_store, limit=2, hybrid=True
+    )
+
+    assert DOCUMENTS[2] not in [chunk.content for chunk in dense_only.chunks]
+    assert DOCUMENTS[2] in [chunk.content for chunk in hybrid.chunks]
+    assert hybrid_store.lexical_queries == ["bazel asan cmake"]
+
+
+def test_hybrid_retrieval_hands_the_fused_list_to_the_reranker(
+    hybrid_store: LexicalStubStore,
+) -> None:
+    """Fusion sits between search and reranking: the reranker scores the fused candidates."""
+    reranker = ScriptedReranker({DOCUMENTS[2]: 0.95})
+
+    result = retrieve(
+        "bazel asan cmake",
+        embedder=HashingEmbedder(),
+        store=hybrid_store,
+        limit=1,
+        reranker=reranker,
+        candidates=2,
+        hybrid=True,
+    )
+
+    assert DOCUMENTS[2] in reranker.calls[0][1]
+    assert [chunk.content for chunk in result.chunks] == [DOCUMENTS[2]]
+    assert result.chunks[0].relevance == 0.95
+
+
+def test_lexical_search_returns_retrieved_chunks_without_a_distance(
+    hybrid_store: LexicalStubStore,
+) -> None:
+    """The lexical step's chunks carry the store's score as relevance and no dense distance."""
+    [chunk] = lexical_search("anything", store=hybrid_store, limit=5)
+
+    assert chunk.content == DOCUMENTS[2]
+    assert chunk.distance is None
+    assert chunk.relevance == 0.5

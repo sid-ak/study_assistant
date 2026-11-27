@@ -39,6 +39,8 @@ class Components:
     # The reranker study query uses, or None for dense search only, and its candidate count.
     reranker: RerankerProtocol | None = None
     rerank_candidates: int = 20
+    # Whether study query fuses lexical search with dense search.
+    hybrid: bool = False
 
 
 def build_components(settings: Settings) -> Components:
@@ -56,6 +58,7 @@ def build_components(settings: Settings) -> Components:
         registry=registry,
         reranker=build_reranker(settings),
         rerank_candidates=settings.rerank_candidates,
+        hybrid=settings.hybrid_enabled,
     )
 
 
@@ -182,6 +185,7 @@ def run_query(text: str, limit: int, ef_search: int | None, components: Componen
             ef_search=ef_search,
             reranker=components.reranker,
             candidates=components.rerank_candidates,
+            hybrid=components.hybrid,
         )
     except EmbedderNotFoundError:
         print(
@@ -202,9 +206,11 @@ def run_query(text: str, limit: int, ef_search: int | None, components: Componen
     else:
         ef_text = str(ef_search)
     reranked_text = ""
+    if components.hybrid:
+        reranked_text += ", hybrid with lexical search"
     if components.reranker is not None:
         # The count retrieve actually used, which it widens to the limit when that is larger.
-        reranked_text = (
+        reranked_text += (
             f", reranked by {components.reranker.model_id} from {result.candidates} candidates"
         )
     print(

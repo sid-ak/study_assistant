@@ -53,6 +53,8 @@ class AgentEvalRun:
     # The reranker the MCP server ranked with and its candidate count, or None for dense search.
     reranker: str | None
     candidates: int | None
+    # Whether the server fused lexical search with dense search.
+    hybrid: bool
     question_count: int
     answered: int
     insufficient_context: int
@@ -93,6 +95,7 @@ async def run_agent_eval(
     generation_model: str,
     reranker: str | None = None,
     candidates: int | None = None,
+    hybrid: bool = False,
 ) -> AgentEvalRun:
     """Ask each question through ``answer`` and score the answers.
 
@@ -124,7 +127,7 @@ async def run_agent_eval(
                 latency_ms=latency_ms,
             )
         )
-    return summarize(results, generation_model, reranker, candidates)
+    return summarize(results, generation_model, reranker, candidates, hybrid)
 
 
 def summarize(
@@ -132,6 +135,7 @@ def summarize(
     generation_model: str,
     reranker: str | None,
     candidates: int | None,
+    hybrid: bool,
 ) -> AgentEvalRun:
     """The run's totals from its per-question results."""
     answered = 0
@@ -152,6 +156,7 @@ def summarize(
         generation_model=generation_model,
         reranker=reranker,
         candidates=candidates,
+        hybrid=hybrid,
         question_count=len(results),
         answered=answered,
         insufficient_context=len(results) - answered,

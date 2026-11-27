@@ -13,9 +13,9 @@ from mcp.server.mcpserver import MCPServer
 
 # Environment variables the MCP server reads, by prefix. Only these are passed to its process, on
 # top of the MCP SDK's safe defaults (PATH, HOME, and the like); the generation key is not.
-# "RERANK" covers RERANK_ENABLED, RERANK_CANDIDATES, and RERANKER_MODEL: the server decides
-# whether its searches are reranked.
-SERVER_ENVIRONMENT_PREFIXES = ("DATABASE_", "EMBEDDING_", "FASTEMBED_", "RERANK")
+# "RERANK" covers RERANK_ENABLED, RERANK_CANDIDATES, and RERANKER_MODEL, and "HYBRID_" covers
+# HYBRID_ENABLED: the server decides how its searches rank, so every such setting must reach it.
+SERVER_ENVIRONMENT_PREFIXES = ("DATABASE_", "EMBEDDING_", "FASTEMBED_", "RERANK", "HYBRID_")
 # Variables passed by exact name. fastembed keeps its default model cache in the temporary folder,
 # so without TMPDIR the server would use /tmp and download a second copy of the model.
 SERVER_ENVIRONMENT_NAMES = ("TMPDIR",)
@@ -39,7 +39,8 @@ class SearchHit:
     document: str
     section: str
     content: str
-    distance: float
+    # None for a chunk only lexical search found, in hybrid mode.
+    distance: float | None
     relevance: float
 
 
@@ -97,13 +98,16 @@ class McpSearchClient:
             records = result.structured_content["result"]
             hits: list[SearchHit] = []
             for record in records:
+                distance = record["distance"]
+                if distance is not None:
+                    distance = float(distance)
                 hits.append(
                     SearchHit(
                         id=str(record["id"]),
                         document=str(record["document"]),
                         section=str(record["section"]),
                         content=str(record["content"]),
-                        distance=float(record["distance"]),
+                        distance=distance,
                         relevance=float(record["relevance"]),
                     )
                 )
