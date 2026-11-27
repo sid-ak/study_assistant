@@ -16,7 +16,7 @@ from api.mcp_client import SearchHit
 
 
 class CheckpointError(Exception):
-    """A paused run could not be saved or read, because the database was unreachable."""
+    """The database holding paused runs failed, while connecting or during a run."""
 
 
 def checkpoint_serializer() -> JsonPlusSerializer:
@@ -34,8 +34,8 @@ async def postgres_checkpointer(database_url: str) -> AsyncIterator[AsyncPostgre
 
     Raises ``ValueError`` without a connection string, so a run cannot reach its pause before
     finding out that there is nowhere to save it, and ``CheckpointError`` when the database cannot
-    be reached, here or later in the run, so the caller can report one line instead of a driver
-    traceback.
+    be used, whether it refuses the connection or fails later in the run, so the caller can report
+    one line instead of a driver traceback.
     """
     if not database_url.strip():
         raise ValueError(
@@ -49,6 +49,4 @@ async def postgres_checkpointer(database_url: str) -> AsyncIterator[AsyncPostgre
             await saver.setup()
             yield saver
     except psycopg.OperationalError as error:
-        raise CheckpointError(
-            f"The database holding paused runs could not be reached: {error}"
-        ) from error
+        raise CheckpointError(f"The database holding paused runs failed: {error}") from error
