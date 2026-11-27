@@ -9,6 +9,7 @@ chunks), with `k = 5` and 5 timed retrievals per question.
 | --- | --- | --- | --- | --- | --- |
 | `dense-bge-small` | `BAAI/bge-small-en-v1.5`, 384 dimensions | 0.90 | 0.88 | 26.0 ms | 41.6 ms |
 | `dense-bge-base` | `BAAI/bge-base-en-v1.5`, 768 dimensions | 0.90 | 0.85 | 42.1 ms | 56.1 ms |
+| `dense-bge-small-rerank` | `BAAI/bge-small-en-v1.5`, reranked by `jina-reranker-v1-tiny-en` from 20 candidates | 0.95 | 0.83 | 283.1 ms | 417.5 ms |
 
 Latency covers embedding the query and the database search, on an Apple M1 with 8 GB of memory and
 Postgres in Docker. It varies by several milliseconds between runs of the same configuration, so
@@ -58,6 +59,7 @@ requests to the generation model. Each question is asked once.
 | Run | Generation model | Answered | Grounding pass rate | Citation recall | p50 latency | p95 latency |
 | --- | --- | --- | --- | --- | --- | --- |
 | `agent-qwen3.8-27b` | `qwen/qwen3.8-27b` on Groq | 10 of 10 | 1.00 | 0.90 | 1.0 s | 9.7 s |
+| `agent-qwen3.8-27b-rerank` | `qwen/qwen3.8-27b` on Groq, search reranked | 10 of 10 | 1.00 | 0.95 | 1.0 s | 12.3 s |
 
 - Every answer cites only chunks it was shown, as the answer schema's `enum` of context ids
   requires, and no answer text contains a chunk id.
@@ -70,4 +72,36 @@ requests to the generation model. Each question is asked once.
   still cited the CI write-up about the 5.0 upgrade and gave the correct version, 3.28.
 - One question took 9.7 s against about 1 s for the rest. The adapter does not log rate-limit
   waits, so whether that was a wait on the per-minute token budget or a slow reply is not known.
+
+## Reranking
+
+`dense-bge-small-rerank` repeats the dense baseline with reranking on: dense search fetches 20
+candidates and `jina-reranker-v1-tiny-en` rescores them and keeps the top five.
+`agent-qwen3.8-27b-rerank` repeats the agent run the same way, with the agent grading on the
+reranker's score.
+
+- Recall@5 rises from 0.90 to 0.95. `cmake-minimum-5-0` now finds both labeled sections, with
+  Orbit 5.0's Breaking changes first, where dense search ranked Orbit 4.0's first and missed 5.0's.
+  `error-e1050` moves from third to first.
+- MRR falls from 0.88 to 0.83. For `linker-out-of-memory` the write-up's Cause, which explains the
+  out-of-memory kill, ranks above its Fix, which limits parallel links. For
+  `workers-flag-replacement` Orbit 5.0's Upgrade notes, which name `--orbit-workers` but not its
+  replacement, rank above its Breaking changes. In both, the reranker prefers a section of the right
+  document that is about the question's subject over the one that answers it.
+- `remote-cache-outage` still finds only the Bazel guide's section. The CI write-up's Cause section
+  is among the 20 dense candidates (ninth), and the reranker scores the write-up's title, Symptom,
+  and Fix sections above it, so it stays outside the top five.
+- Latency rises from a 26.0 ms to a 283.1 ms median, and from 41.6 ms to 417.5 ms at p95: scoring 20
+  query and passage pairs costs about 255 ms on this machine. The model adds 3.7 s to load and
+  324 MB of memory, once per process.
+- In the agent run, citation recall rises from 0.90 to 0.95, with `cmake-minimum-5-0` now citing
+  both sections, and every answer stays grounded. The median per question stays about 1 s, since
+  generation dominates. One question again took over 9 s; the adapter does not log rate-limit
+  waits, so the cause is not known.
+- The reranker separates answerable from off-topic questions far more clearly than dense
+  similarity: the golden questions' top hits score 0.821 to 0.948 and off-topic questions at most
+  0.489, against 0.668 to 0.884 and up to 0.64 by cosine similarity.
+
+Reranking is therefore on by default (`RERANK_ENABLED`). It buys recall, citation recall, and a
+reliable relevance grade, for about a quarter of a second per search.
 

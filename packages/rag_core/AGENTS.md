@@ -129,7 +129,7 @@ Not ADR-level, but load-bearing for anyone adding to `store/`:
   document contains.
 - The reranker loads its model on first `score`, like the embedder; building one only checks the
   model id against fastembed's list.
-- `RERANK_ENABLED` (default off), `RERANKER_MODEL`, and `RERANK_CANDIDATES` (default 20) configure
+- `RERANK_ENABLED` (default on), `RERANKER_MODEL`, and `RERANK_CANDIDATES` (default 20) configure
   it; `build_reranker(settings)` returns the reranker or `None`, and every caller of `retrieve`
   builds it this way.
 - `retrieve` is two separate steps, `search` then `rerank`, so another step (such as hybrid fusion)

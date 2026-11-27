@@ -78,14 +78,14 @@ def test_an_unknown_model_is_refused_when_built() -> None:
 
 
 def test_settings_choose_the_reranker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Reranking is off by default, with the tiny jina model and 20 candidates when turned on."""
+    """Reranking is on by default, with the tiny jina model rescoring 20 candidates."""
     monkeypatch.chdir(tmp_path)
     for name in ["RERANK_ENABLED", "RERANKER_MODEL", "RERANK_CANDIDATES"]:
         monkeypatch.delenv(name, raising=False)
 
     settings = Settings()
 
-    assert settings.rerank_enabled is False
+    assert settings.rerank_enabled is True
     assert settings.reranker_model == "jinaai/jina-reranker-v1-tiny-en"
     assert settings.rerank_candidates == 20
     assert FastembedReranker.from_settings(settings).model_id == settings.reranker_model

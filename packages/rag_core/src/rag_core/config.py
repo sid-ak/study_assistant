@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # Reranking: whether retrieval reranks, the cross-encoder it uses, and how many dense-search
     # candidates it rescores before keeping the top results.
-    rerank_enabled: bool = False
+    rerank_enabled: bool = True
     reranker_model: str = "jinaai/jina-reranker-v1-tiny-en"
     rerank_candidates: int = 20
 
