@@ -59,6 +59,12 @@ Chunk 5 (#69) adds hybrid retrieval behind `HYBRID_ENABLED`: Postgres full-text 
 the two lists before reranking. On the golden set it changes no ranking once reranking is on, so it
 is off by default; with reranking off it finds exact codes dense search misses.
 
+Chunk 6 (#70) puts a person in the loop. With `study-ask "<question>" --review` the run stops after
+retrieval, lists the sources it would answer from with the relevance each was ranked by, and prints
+a thread id. The paused run is saved in Postgres, so the decision can come later, from another
+process: `study-ask --resume <thread-id> --approve` answers from those sources, and `--reject`
+spends the next hop on a rewritten query and stops at the same checkpoint again.
+
 Later phases add the FastAPI backend and the React frontend.
 
 ## Prerequisites
@@ -96,6 +102,17 @@ the MCP server itself:
 ```sh
 uv run study-ask "Which Bazel flag runs every test under AddressSanitizer?"
 uv run study-eval-agent my-agent-run
+```
+
+Approve the sources before the answer is written. The first command prints the thread id to use in
+the second, and the paused run waits in the database until a decision arrives:
+
+```sh
+uv run study-ask "Which Bazel flag runs every test under AddressSanitizer?" --review
+```
+
+```sh
+uv run study-ask --resume <thread-id> --approve
 ```
 
 Verify pgvector is live:

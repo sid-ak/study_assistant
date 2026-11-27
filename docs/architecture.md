@@ -72,6 +72,15 @@ Generation runs in the FastAPI backend, where a LangGraph state machine orchestr
 grounded answer. Responses stream to the React frontend over SSE, with citations resolving back to
 the exact source slide or page.
 
+The HITL checkpoint sits between the relevance grade and the answer. When a run requires approval,
+the graph presents the retrieved sources and stops; approval continues to the answer, and rejection
+spends one of the run's hops on a rewritten query. The paused state is saved by LangGraph's
+Postgres checkpointer under a thread id, in its own tables in the same database, so a decision can
+arrive from another process or after a restart. Writing checkpoints there is not a retrieval path:
+the corpus is still read only through the search tool, as
+[ADR 0001](decisions/0001-rag-retrieval-boundary.md) requires. Before the API exists, the
+checkpoint is driven from the command line (`study-ask --review`, then `study-ask --resume`).
+
 See [ADR 0007](decisions/0007-generation-backend.md) for the backend and candidate models, and
 [ADR 0011](decisions/0011-free-hosted-generation.md) for the free hosted endpoint the MVP uses by
 default. The embedding and reranking models, and why they run on `fastembed`, are in
