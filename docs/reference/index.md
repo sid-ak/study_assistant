@@ -288,3 +288,19 @@
    :members:
    :show-inheritance:
 ```
+
+## evals.agent
+
+```{eval-rst}
+.. automodule:: evals.agent
+   :members:
+   :show-inheritance:
+```
+
+## evals.agent_main
+
+```{eval-rst}
+.. automodule:: evals.agent_main
+   :members:
+   :show-inheritance:
+```

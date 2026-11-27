@@ -5,13 +5,17 @@ description = "Golden-set evaluation of retrieval quality and latency."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "rag_core",
+    # The agent evaluation runs the generation lane end to end.
+    "api",
 ]
 
 [project.scripts]
 study-eval = "evals.main:main"
+study-eval-agent = "evals.agent_main:main"
 
 [tool.uv.sources]
 rag_core = { workspace = true }
+api = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

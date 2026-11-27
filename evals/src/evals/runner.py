@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from evals.agent import AgentEvalRun
 from evals.golden import GoldenQuestion
 from evals.metrics import percentile, reciprocal_rank, section_recall
 from rag_core.embed import EmbedderProtocol
@@ -139,7 +140,7 @@ def run_eval(
     )
 
 
-def write_run(run: EvalRun, folder: Path, *, name: str) -> Path:
+def write_run(run: EvalRun | AgentEvalRun, folder: Path, *, name: str) -> Path:
     """Save ``run`` as ``<folder>/<name>.json``, with its name and the time it was saved.
 
     Creates ``folder`` if needed. Raises ``FileExistsError`` if a run with that name is already

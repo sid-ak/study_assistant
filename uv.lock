@@ -281,11 +281,15 @@ name = "evals"
 version = "0.0.0"
 source = { editable = "evals" }
 dependencies = [
+    { name = "api" },
     { name = "rag-core" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "rag-core", editable = "packages/rag_core" }]
+requires-dist = [
+    { name = "api", editable = "services/api" },
+    { name = "rag-core", editable = "packages/rag_core" },
+]
 
 [[package]]
 name = "fastembed"

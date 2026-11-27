@@ -23,6 +23,9 @@ from api.graph.prompts import answer_messages, answer_schema, rewrite_messages
 from api.graph.state import AgentState
 from api.mcp_client import SearchClientProtocol, SearchHit
 
+# The compiled agent graph, as build_graph returns it and ask runs it.
+CompiledAgent = CompiledStateGraph[AgentState]
+
 ANSWERED = "answered"
 INSUFFICIENT_CONTEXT = "insufficient_context"
 
@@ -168,7 +171,7 @@ def build_graph(
     *,
     config: AgentConfig | None = None,
     checkpointer: BaseCheckpointSaver[str] | None = None,
-) -> CompiledStateGraph[AgentState]:
+) -> CompiledAgent:
     """Compile the agent over ``search`` and ``generator``.
 
     With a ``checkpointer``, each run's state is saved under the thread id passed to ``ask``.
@@ -196,9 +199,7 @@ def build_graph(
     return graph.compile(checkpointer=checkpointer)
 
 
-async def ask(
-    graph: CompiledStateGraph[AgentState], question: str, *, thread_id: str | None = None
-) -> AgentAnswer:
+async def ask(graph: CompiledAgent, question: str, *, thread_id: str | None = None) -> AgentAnswer:
     """Run ``graph`` on ``question`` and return its answer.
 
     ``thread_id`` names the run's saved state when the graph has a checkpointer.
