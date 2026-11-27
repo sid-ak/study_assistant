@@ -31,11 +31,14 @@ def reranker(request: pytest.FixtureRequest) -> RerankerProtocol:
 
 
 def test_scores_come_back_in_document_order(reranker: RerankerProtocol) -> None:
-    """One score per document, in the order the documents were given."""
-    scores = reranker.score(QUERY, [UNRELATED, RELEVANT, UNRELATED])
+    """One score per document, in the order the documents were given, whichever way round."""
+    forward = reranker.score(QUERY, [UNRELATED, RELEVANT, UNRELATED])
+    backward = reranker.score(QUERY, [RELEVANT, UNRELATED])
 
-    assert len(scores) == 3
-    assert scores[0] == pytest.approx(scores[2])
+    assert len(forward) == 3
+    assert forward[0] == pytest.approx(forward[2])
+    assert forward[1] > forward[0]
+    assert backward[0] > backward[1]
 
 
 def test_scores_are_relevance_from_zero_to_one(reranker: RerankerProtocol) -> None:
@@ -64,11 +67,21 @@ def test_both_rerankers_satisfy_the_protocol() -> None:
     assert isinstance(fake, RerankerProtocol)
 
 
-def test_the_model_loads_only_on_first_use() -> None:
-    """Building the reranker downloads and loads nothing; scoring does."""
+def test_building_the_reranker_loads_nothing() -> None:
+    """Building the reranker downloads and loads nothing."""
     reranker = FastembedReranker("jinaai/jina-reranker-v1-tiny-en")
 
     assert reranker.is_loaded is False
+
+
+@pytest.mark.integration
+def test_the_first_score_loads_the_model() -> None:
+    """Scoring loads the model, and the reranker keeps it for later calls."""
+    reranker = FastembedReranker("jinaai/jina-reranker-v1-tiny-en")
+
+    reranker.score(QUERY, [RELEVANT])
+
+    assert reranker.is_loaded is True
 
 
 def test_an_unknown_model_is_refused_when_built() -> None:

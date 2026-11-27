@@ -219,3 +219,19 @@ def test_run_eval_records_hybrid_retrieval(
     assert hybrid.hybrid is True
     assert dense.hybrid is False
     assert hybrid.questions[0].recall == 1.0
+
+
+def test_run_eval_records_the_candidates_actually_reranked(
+    store: InMemoryStore, embedder: HashingEmbedder, caching_question: GoldenQuestion
+) -> None:
+    """A store holding fewer chunks than requested records how many the reranker scored."""
+    run = run_eval(
+        [caching_question],
+        embedder=embedder,
+        store=store,
+        k=1,
+        reranker=OverlapReranker(),
+        candidates=20,
+    )
+
+    assert run.candidates == 3

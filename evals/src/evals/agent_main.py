@@ -73,10 +73,9 @@ async def run_live(
         # The server reads the same settings, so these name how its searches ranked.
         retrieval = Settings()
         reranker = None
-        candidates = None
         if retrieval.rerank_enabled:
             reranker = retrieval.reranker_model
-            candidates = retrieval.rerank_candidates
+        candidates = recorded_candidates(retrieval, config)
         return await run_agent_eval(
             questions,
             answer=GraphAnswerer(graph),
@@ -85,6 +84,17 @@ async def run_live(
             candidates=candidates,
             hybrid=retrieval.hybrid_enabled,
         )
+
+
+def recorded_candidates(retrieval: Settings, config: AgentConfig) -> int | None:
+    """How many candidates the MCP server reranks per search, or ``None`` when it does not rerank.
+
+    The server widens its candidates to the search limit when the limit is larger, so the record
+    does the same.
+    """
+    if not retrieval.rerank_enabled:
+        return None
+    return max(retrieval.rerank_candidates, config.search_limit)
 
 
 def print_agent_run(run: AgentEvalRun) -> None:
