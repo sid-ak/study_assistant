@@ -160,8 +160,9 @@ def body_preview(content: str, metadata: dict[str, Any]) -> str:
 def run_query(text: str, limit: int, ef_search: int | None, components: Components) -> int:
     """Print the ``limit`` chunks nearest to ``text`` and the search latency; return the status.
 
-    Each result line shows the rank, the cosine distance, the chunk id, and the chunk's source and
-    headings, followed by the start of its text. The model is loaded before the timed search, so
+    Each result line shows the rank, the relevance the ranking used (the reranker's score, or the
+    cosine similarity without one), the chunk id, and the chunk's source and headings, followed by
+    the start of its text. The model is loaded before the timed search, so
     the reported latency is embedding the query plus searching, not loading the model.
     """
     components.store.initialize()
@@ -194,7 +195,7 @@ def run_query(text: str, limit: int, ef_search: int | None, components: Componen
         return USAGE_ERROR
 
     for rank, chunk in enumerate(result.chunks, start=1):
-        print(f"{rank}. {chunk.distance:.4f}  {chunk.id}  {chunk_location(chunk.metadata)}")
+        print(f"{rank}. {chunk.relevance:.4f}  {chunk.id}  {chunk_location(chunk.metadata)}")
         print(f"   {body_preview(chunk.content, chunk.metadata)}")
     if ef_search is None:
         ef_text = "default"

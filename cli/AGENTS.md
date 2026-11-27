@@ -14,8 +14,8 @@ retrieval boundary (0001) and CLI batch ingestion (0004).
   model is, and embeds every stored chunk that model has no vector for. Ingestion skips files
   whose content is already stored, so this is how a second model gets vectors for the existing
   corpus. Run it with `EMBEDDING_MODEL` and `EMBEDDING_DIMENSION` set for that model.
-- `study query "<text>" [--limit N] [--ef-search N]`: prints the nearest chunks with their rank,
-  cosine distance, chunk id, and source with heading path, then the result count, the latency in
+- `study query "<text>" [--limit N] [--ef-search N]`: prints the most relevant chunks with their
+  rank, relevance (the reranker's score, or the cosine similarity when reranking is off), chunk id, and source with heading path, then the result count, the latency in
   milliseconds, the model, `ef_search`, and the reranker when `RERANK_ENABLED` is on. The model is loaded with a warm-up query before the
   timed search, so the latency covers embedding the query and searching, not model loading.
 

@@ -106,7 +106,7 @@ def retrieve(
     """Return the ``limit`` most relevant chunks for ``query``, most relevant first, with timings.
 
     Without a ``reranker``, this is dense search: the ``limit`` chunks nearest to the query. With
-    one, dense search fetches ``candidates`` chunks, which must be at least ``limit``, and the
+    one, dense search fetches ``candidates`` chunks, raised to ``limit`` when smaller, and the
     reranker's scores pick and order the ``limit`` returned.
 
     ``embedder`` and ``store`` must be bound to the same model, or the query vector would be
@@ -115,11 +115,8 @@ def retrieve(
     covers embedding, searching, and reranking, measured with a monotonic clock.
     """
     check_same_model(embedder, store)
-    if reranker is not None and candidates < limit:
-        raise ValueError(
-            f"candidates ({candidates}) must be at least limit ({limit}): the reranker can only "
-            "return chunks it was given."
-        )
+    # The reranker can only return chunks it was given, so fetch at least ``limit`` of them.
+    candidates = max(candidates, limit)
     started = time.perf_counter()
     if reranker is None:
         chunks = search(query, embedder=embedder, store=store, limit=limit, ef_search=ef_search)

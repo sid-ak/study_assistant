@@ -195,17 +195,23 @@ def test_reranking_time_is_measured_and_included_in_the_total(
     assert result.latency_ms >= result.rerank_latency_ms
 
 
-def test_fewer_candidates_than_results_is_refused(hashing_store: StoreProtocol) -> None:
-    """The reranker can only return candidates it was given, so candidates must cover the limit."""
-    with pytest.raises(ValueError, match="candidates"):
-        retrieve(
-            "asan",
-            embedder=HashingEmbedder(),
-            store=hashing_store,
-            limit=3,
-            reranker=ScriptedReranker({}),
-            candidates=2,
-        )
+def test_fewer_candidates_than_results_are_widened_to_the_limit(
+    hashing_store: StoreProtocol,
+) -> None:
+    """The reranker can only return chunks it was given, so candidates grow to cover the limit."""
+    reranker = ScriptedReranker({})
+
+    result = retrieve(
+        "asan",
+        embedder=HashingEmbedder(),
+        store=hashing_store,
+        limit=3,
+        reranker=reranker,
+        candidates=2,
+    )
+
+    assert len(result.chunks) == 3
+    assert len(reranker.calls[0][1]) == 3
 
 
 def test_search_and_rerank_are_separate_steps(hashing_store: StoreProtocol) -> None:

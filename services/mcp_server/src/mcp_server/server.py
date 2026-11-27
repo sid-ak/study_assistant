@@ -69,15 +69,13 @@ class SearchTool:
             raise ToolError("query must contain text.")
         if limit < 1 or limit > MAX_SEARCH_LIMIT:
             raise ToolError(f"limit must be 1 to {MAX_SEARCH_LIMIT}, not {limit}.")
-        # With a reranker, dense search fetches at least as many candidates as the caller wants.
-        candidates = max(self.candidates, limit)
         result = retrieve(
             query,
             embedder=self.embedder,
             store=self.store,
             limit=limit,
             reranker=self.reranker,
-            candidates=candidates,
+            candidates=self.candidates,
         )
         return [hit_from_chunk(chunk) for chunk in result.chunks]
 

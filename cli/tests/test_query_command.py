@@ -13,8 +13,8 @@ from rag_core_testing import HASHING_EMBEDDER, InMemoryStore, OverlapReranker
 from study_cli import main as cli_main
 from study_cli.main import main
 
-# One result line: rank, distance, chunk id, then where the chunk comes from.
-RESULT_LINE = re.compile(r"^(\d+)\. (\d\.\d{4})  ([0-9a-f-]{36})  (.+)$", re.MULTILINE)
+# One result line: rank, relevance, chunk id, then where the chunk comes from.
+RESULT_LINE = re.compile(r"^(\d+)\. (-?\d\.\d{4})  ([0-9a-f-]{36})  (.+)$", re.MULTILINE)
 
 
 class UnregisteredStore(InMemoryStore):
@@ -40,14 +40,14 @@ def ingested(
 def test_query_prints_ranked_chunks_with_ids_and_distances(
     components: cli_main.Components, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Each result shows its rank, cosine distance, chunk id, and source, nearest first."""
+    """Each result shows its rank, relevance, chunk id, and source, most relevant first."""
     exit_code = main(["query", "undefined reference to pthread_create"])
     output = capsys.readouterr().out
     assert exit_code == 0
     results = RESULT_LINE.findall(output)
     assert [rank for rank, _, _, _ in results] == ["1", "2"]
-    distances = [float(distance) for _, distance, _, _ in results]
-    assert distances == sorted(distances)
+    relevances = [float(relevance) for _, relevance, _, _ in results]
+    assert relevances == sorted(relevances, reverse=True)
     assert results[0][3] == "ci.md > Failure"
     assert "undefined reference to pthread_create" in output
 
@@ -134,4 +134,27 @@ def test_query_reranks_when_the_components_have_a_reranker(
     assert main(["query", "undefined reference to pthread_create"]) == 0
     output = capsys.readouterr().out
     assert "reranked by test/overlap-reranker from 20 candidates" in output
-    assert RESULT_LINE.findall(output)[0][3] == "ci.md > Failure"
+    results = RESULT_LINE.findall(output)
+    assert results[0][3] == "ci.md > Failure"
+    relevances = [float(relevance) for _, relevance, _, _ in results]
+    assert relevances == sorted(relevances, reverse=True)
+    assert relevances[0] == 1.0
+
+
+@pytest.mark.usefixtures("ingested")
+def test_a_limit_above_the_candidates_widens_them(
+    components: cli_main.Components,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Asking for more results than reranking candidates is not an error; candidates grow."""
+    reranked = replace(components, reranker=OverlapReranker(), rerank_candidates=1)
+
+    def build_reranked(settings: object) -> cli_main.Components:
+        """Return the components with a one-candidate reranker."""
+        return reranked
+
+    monkeypatch.setattr(cli_main, "build_components", build_reranked)
+
+    assert main(["query", "pthread cmake", "--limit", "2"]) == 0
+    assert len(RESULT_LINE.findall(capsys.readouterr().out)) == 2
