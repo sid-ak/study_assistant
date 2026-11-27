@@ -8,6 +8,7 @@ its own, so every consumer of retrieval gets the same behavior.
 from typing import TypedDict
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from rag_core.config import Settings
 from rag_core.embed import EmbedderProtocol, FastembedEmbedder
@@ -48,10 +49,12 @@ class SearchTool:
         Each hit has the chunk's id, its source document, its heading path, its text, and its
         cosine distance to the query (0 is identical, 2 is opposite). ``limit`` is 1 to 20.
         """
+        # ToolError is the SDK's anticipated failure: its message reaches the client. Any other
+        # exception is treated as a crash, and the client sees only a generic message.
         if not query.strip():
-            raise ValueError("query must contain text.")
+            raise ToolError("query must contain text.")
         if limit < 1 or limit > MAX_SEARCH_LIMIT:
-            raise ValueError(f"limit must be 1 to {MAX_SEARCH_LIMIT}, not {limit}.")
+            raise ToolError(f"limit must be 1 to {MAX_SEARCH_LIMIT}, not {limit}.")
         result = retrieve(query, embedder=self.embedder, store=self.store, limit=limit)
         return [hit_from_chunk(chunk) for chunk in result.chunks]
 
@@ -72,7 +75,7 @@ def build_server(*, embedder: EmbedderProtocol, store: StoreProtocol) -> MCPServ
     server = MCPServer(SERVER_NAME)
     tool = SearchTool(embedder, store)
     # The tool's name, description, and argument schema come from the method's signature and
-    # docstring; a ValueError it raises reaches the client as an error result.
+    # docstring.
     server.add_tool(tool.search, name="search")
     return server
 

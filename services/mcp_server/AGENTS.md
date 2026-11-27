@@ -13,8 +13,9 @@ the retrieval boundary (0001).
 - One tool, `search(query, limit=5)`: returns up to `limit` (1 to 20) chunks nearest to the query,
   each as `{id, document, section, content, distance}`. `id` is the stored chunk id, which is what
   answers cite. `section` is the heading path joined with ` > `. `distance` is cosine distance.
-- Invalid arguments are raised as `ValueError`, which the MCP SDK returns to the client as an error
-  result rather than a broken connection.
+- Invalid arguments raise `ToolError`, which the MCP SDK returns to the client as an error result
+  carrying the message. Any other exception from a tool counts as a crash: the client sees only
+  `Error executing tool search`, so anticipated failures must use `ToolError`.
 
 ## Conventions
 

@@ -1,6 +1,7 @@
 """Fakes for the generation lane's interfaces, used by the ``services/api`` tests."""
 
 from api.generate import ChatMessage, ResponseSchema
+from api.mcp_client import SearchHit
 
 
 class ScriptedGenerator:
@@ -30,3 +31,17 @@ class ScriptedGenerator:
         if not self.replies:
             raise AssertionError("ScriptedGenerator received more requests than it has replies.")
         return self.replies.pop(0)
+
+
+class FakeSearchClient:
+    """A ``SearchClientProtocol`` that answers each query with prepared hits and records queries."""
+
+    def __init__(self, hits_by_query: dict[str, list[SearchHit]]) -> None:
+        """Answer a query with ``hits_by_query[query]``, or no hits for an unknown query."""
+        self.hits_by_query = hits_by_query
+        self.queries: list[str] = []
+
+    async def search(self, query: str, limit: int) -> list[SearchHit]:
+        """Record the query and return its prepared hits, at most ``limit`` of them."""
+        self.queries.append(query)
+        return self.hits_by_query.get(query, [])[:limit]

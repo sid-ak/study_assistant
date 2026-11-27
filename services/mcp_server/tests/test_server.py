@@ -103,3 +103,5 @@ def test_search_reports_invalid_arguments_as_a_tool_error(
     result = asyncio.run(call_search(store, arguments))
 
     assert result.is_error is True
+    message = result.content[0].text
+    assert "query" in message or "limit" in message

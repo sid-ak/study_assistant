@@ -248,3 +248,11 @@
    :members:
    :show-inheritance:
 ```
+
+## api.mcp_client.client
+
+```{eval-rst}
+.. automodule:: api.mcp_client.client
+   :members:
+   :show-inheritance:
+```
