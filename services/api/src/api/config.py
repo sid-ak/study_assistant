@@ -26,6 +26,11 @@ class ApiSettings(BaseSettings):
     # The command that starts the MCP server over stdio.
     mcp_server_command: str = "study-mcp"
 
+    # Where runs paused for approval are saved, so a decision can arrive after a restart. The same
+    # database the corpus lives in; this lane writes only its own checkpoint tables and still
+    # reaches retrieval through the search tool. None when nothing pauses.
+    database_url: str | None = None
+
     # The agent's bounds: searches per question, the relevance threshold on the top hit's cosine
     # similarity, and chunks per search.
     agent_max_hops: int = 2

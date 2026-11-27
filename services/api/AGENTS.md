@@ -22,6 +22,9 @@ bounded agent (0012).
   thread_id=...)` continues that run with `APPROVE` or `REJECT`. Both return an `AgentOutcome`:
   an `AgentAnswer`, or a `PendingReview` (thread id, question, query, hops, and the sources as
   `PendingSource` records of id, document, and section).
+- `api.graph.checkpoint`: `postgres_checkpointer(database_url)`, an async context manager over
+  LangGraph's `AsyncPostgresSaver` that creates its own checkpoint tables on first use, and
+  `checkpoint_serializer()`, the serializer it uses.
 - `api.generate`: `GeneratorProtocol` and `OpenAICompatibleGenerator`, configured by the
   `GENERATION_*` settings in `api.config.ApiSettings`.
 - `api.mcp_client`: `SearchClientProtocol` and `McpSearchClient`, which starts `study-mcp` over
@@ -60,5 +63,15 @@ bounded agent (0012).
   MCP connection's event loop is not blocked during a request.
 - Rate limits and caching live in the adapter, not the graph: it waits out HTTP 429 using the reset
   headers, sends its own User-Agent, and caches replies under `GENERATION_CACHE_DIR`.
+- Paused runs are saved by `api.graph.checkpoint`, in the `DATABASE_URL` database, in LangGraph's
+  own `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, and `checkpoint_migrations` tables.
+  Writing checkpoints there is not a retrieval path: the corpus is still read only through the
+  search tool.
+  - The serializer is told about every type the state carries (`SearchHit`). An unlisted type is
+    restored as a plain dictionary, which would fail later inside the answer step, and LangGraph
+    will refuse unlisted types outright in a later version. Add new state types to
+    `checkpoint_serializer()`, with a test.
+  - Integration tests save to `TEST_DATABASE_URL` through the `checkpoint_database_url` fixture in
+    `tests/conftest.py`, which drops the checkpoint tables afterwards.
 - Fakes live in `tests/api_fakes.py`: `ScriptedGenerator` replays prepared replies and records
   requests, and `FakeSearchClient` answers queries with prepared hits.
