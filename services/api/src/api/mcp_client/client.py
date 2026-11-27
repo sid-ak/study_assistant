@@ -17,6 +17,8 @@ SERVER_ENVIRONMENT_PREFIXES = ("DATABASE_", "EMBEDDING_", "FASTEMBED_")
 # Variables passed by exact name. fastembed keeps its default model cache in the temporary folder,
 # so without TMPDIR the server would use /tmp and download a second copy of the model.
 SERVER_ENVIRONMENT_NAMES = ("TMPDIR",)
+# The most results the search tool returns per call, as its server documents and enforces.
+MAX_SEARCH_LIMIT = 20
 
 
 class SearchError(Exception):
@@ -56,8 +58,13 @@ class McpSearchClient:
         self.client = Client(server)
 
     async def __aenter__(self) -> "McpSearchClient":
-        """Open the connection."""
-        await self.client.__aenter__()
+        """Open the connection; raise ``SearchError`` if the server cannot start or be reached."""
+        try:
+            await self.client.__aenter__()
+        except Exception as error:
+            # A missing command raises FileNotFoundError, and a server that exits during startup
+            # raises from the SDK; either way the agent has no search tool.
+            raise SearchError(f"Could not start or connect to the MCP server: {error}") from error
         return self
 
     async def __aexit__(

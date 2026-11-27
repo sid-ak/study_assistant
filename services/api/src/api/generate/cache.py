@@ -42,11 +42,17 @@ class FileResponseCache:
         return self.folder / f"{key}.json"
 
     def get(self, key: str) -> str | None:
-        """The reply stored under ``key``, or ``None``."""
+        """The reply stored under ``key``, or ``None`` if there is none or it cannot be read."""
         path = self.path_for(key)
         if not path.is_file():
             return None
-        stored = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            stored = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError:
+            # A file cut short by an interrupted write: fetch the reply again.
+            return None
+        if not isinstance(stored, dict):
+            return None
         reply = stored.get("reply")
         if not isinstance(reply, str):
             return None

@@ -120,6 +120,17 @@ def test_no_hits_at_all_counts_as_irrelevant() -> None:
     assert result.context == []
 
 
+def test_no_hits_is_never_relevant_even_at_a_zero_threshold() -> None:
+    """With nothing retrieved there is nothing to answer from, so generation is never reached."""
+    search = FakeSearchClient({})
+    generator = ScriptedGenerator([REWRITTEN])
+
+    result = run(search, generator, AgentConfig(max_hops=2, relevance_threshold=0.0))
+
+    assert result.status == "insufficient_context"
+    assert len(generator.requests) == 1
+
+
 def test_the_model_can_judge_relevant_context_insufficient() -> None:
     """Context above the threshold may still not answer the question; the model says so."""
     search = FakeSearchClient({QUESTION: RELEVANT})
@@ -233,8 +244,8 @@ def test_a_checkpointer_saves_the_runs_state() -> None:
 
 @pytest.mark.parametrize(
     "settings",
-    [{"max_hops": 0}, {"relevance_threshold": 1.5}, {"search_limit": 0}],
-    ids=["no hops", "threshold above one", "no results"],
+    [{"max_hops": 0}, {"relevance_threshold": 1.5}, {"search_limit": 0}, {"search_limit": 21}],
+    ids=["no hops", "threshold above one", "no results", "more results than the tool returns"],
 )
 def test_agent_config_rejects_values_that_cannot_work(settings: dict[str, Any]) -> None:
     """A run needs at least one hop and one result, and a similarity threshold within 0 to 1."""

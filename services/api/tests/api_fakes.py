@@ -1,7 +1,7 @@
 """Fakes for the generation lane's interfaces, used by the ``services/api`` tests."""
 
 from api.generate import ChatMessage, ResponseSchema
-from api.mcp_client import SearchHit
+from api.mcp_client import MAX_SEARCH_LIMIT, SearchError, SearchHit
 
 
 class ScriptedGenerator:
@@ -42,6 +42,11 @@ class FakeSearchClient:
         self.queries: list[str] = []
 
     async def search(self, query: str, limit: int) -> list[SearchHit]:
-        """Record the query and return its prepared hits, at most ``limit`` of them."""
+        """Record the query and return its prepared hits, at most ``limit`` of them.
+
+        Raises ``SearchError`` for a limit the real tool refuses, outside 1 to ``MAX_SEARCH_LIMIT``.
+        """
+        if limit < 1 or limit > MAX_SEARCH_LIMIT:
+            raise SearchError(f"limit must be 1 to {MAX_SEARCH_LIMIT}, not {limit}.")
         self.queries.append(query)
         return self.hits_by_query.get(query, [])[:limit]

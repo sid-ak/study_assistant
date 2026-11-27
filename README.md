@@ -49,7 +49,7 @@ Chunk 3 (#48) adds the generation lane:
 - `study-eval-agent <name>` checks citations over the golden set: all ten answered, all grounded,
   with citation recall 0.90.
 
-Later phases add the MCP server, the FastAPI backend, and the React frontend.
+Later phases add the FastAPI backend and the React frontend.
 
 ## Prerequisites
 

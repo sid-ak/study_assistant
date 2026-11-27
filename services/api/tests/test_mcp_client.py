@@ -13,11 +13,13 @@ from api_fakes import FakeSearchClient
 from mcp.server.mcpserver import MCPServer
 
 from api.mcp_client import (
+    MAX_SEARCH_LIMIT,
     McpSearchClient,
     SearchClientProtocol,
     SearchError,
     SearchHit,
     server_environment,
+    stdio_server,
 )
 from mcp_server.server import build_server
 from rag_core.ingest import ingest_folder
@@ -107,3 +109,22 @@ def test_the_client_and_the_fake_satisfy_the_protocol(server: MCPServer) -> None
     fake: SearchClientProtocol = FakeSearchClient({})
     assert isinstance(real, SearchClientProtocol)
     assert isinstance(fake, SearchClientProtocol)
+
+
+def test_a_server_that_cannot_start_raises_search_error(tmp_path: Path) -> None:
+    """A missing server command is reported as ``SearchError``, not an operating-system error."""
+
+    async def connect() -> None:
+        """Try to open a client on a command that does not exist."""
+        async with McpSearchClient(stdio_server("no-such-mcp-server-command", tmp_path)):
+            pass
+
+    with pytest.raises(SearchError, match="MCP server"):
+        asyncio.run(connect())
+
+
+@pytest.mark.parametrize("limit", [0, MAX_SEARCH_LIMIT + 1])
+def test_the_fake_refuses_the_limits_the_server_refuses(limit: int) -> None:
+    """The fake search client enforces the tool's 1 to 20 limit, like the real server."""
+    with pytest.raises(SearchError):
+        asyncio.run(FakeSearchClient({}).search("query", limit))

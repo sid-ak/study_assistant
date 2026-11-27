@@ -110,9 +110,13 @@ class OpenAICompatibleGenerator:
             headers["Authorization"] = "Bearer " + self._api_key
         retries = 0
         while True:
-            response = self.http_client.post(
-                self.base_url + "/chat/completions", json=body, headers=headers
-            )
+            try:
+                response = self.http_client.post(
+                    self.base_url + "/chat/completions", json=body, headers=headers
+                )
+            except httpx.TransportError as error:
+                # Connection refused, a failed DNS lookup, or the request timing out.
+                raise GenerationError(f"Could not reach {self.base_url}: {error}") from error
             if response.status_code != 429:
                 break
             if retries == MAX_RETRIES:

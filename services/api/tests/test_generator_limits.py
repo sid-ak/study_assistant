@@ -200,3 +200,19 @@ def test_a_failed_request_is_not_cached(tmp_path: Path) -> None:
         generator.generate(MESSAGES)
     assert generator.generate(MESSAGES) == "--config=asan"
     assert len(endpoint.requests) == 2
+
+
+@pytest.mark.parametrize(
+    "stored", ["{not json", "[1, 2]", '{"reply": 3}'], ids=["truncated", "not an object", "no text"]
+)
+def test_a_corrupt_cache_entry_counts_as_a_miss(tmp_path: Path, stored: str) -> None:
+    """An unreadable entry, such as one cut short by an interrupted write, is fetched again."""
+    endpoint = Endpoint([OK])
+    generator = generator_for(endpoint, cache=FileResponseCache(tmp_path))
+    generator.generate(MESSAGES)
+    [entry] = list(tmp_path.iterdir())
+    entry.write_text(stored)
+    endpoint.responses.append(OK)
+
+    assert generator.generate(MESSAGES) == "--config=asan"
+    assert len(endpoint.requests) == 2

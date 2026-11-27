@@ -170,3 +170,24 @@ def test_the_adapter_and_the_fake_satisfy_the_protocol() -> None:
     fake: GeneratorProtocol = ScriptedGenerator(["ok"])
     assert isinstance(real, GeneratorProtocol)
     assert isinstance(fake, GeneratorProtocol)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [httpx.ConnectError("connection refused"), httpx.ReadTimeout("timed out")],
+    ids=["unreachable", "timeout"],
+)
+def test_an_unreachable_endpoint_raises_generation_error(error: httpx.TransportError) -> None:
+    """A connection failure or timeout is a ``GenerationError``, reported in one line."""
+
+    def fail(request: httpx.Request) -> httpx.Response:
+        """Fail the request the way the network would."""
+        raise error
+
+    client = httpx.Client(transport=httpx.MockTransport(fail))
+    generator = OpenAICompatibleGenerator(
+        base_url=BASE_URL, model="test-model", api_key=SECRET, http_client=client
+    )
+
+    with pytest.raises(GenerationError, match="llm.example"):
+        generator.generate(MESSAGES)

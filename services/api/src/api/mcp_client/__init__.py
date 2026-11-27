@@ -1,6 +1,7 @@
 """The client the agent uses to reach retrieval through the MCP server."""
 
 from api.mcp_client.client import (
+    MAX_SEARCH_LIMIT,
     McpSearchClient,
     SearchClientProtocol,
     SearchError,
@@ -10,6 +11,7 @@ from api.mcp_client.client import (
 )
 
 __all__ = [
+    "MAX_SEARCH_LIMIT",
     "McpSearchClient",
     "SearchClientProtocol",
     "SearchError",

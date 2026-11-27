@@ -21,7 +21,7 @@ from langgraph.graph.state import CompiledStateGraph
 from api.generate import GenerationError, GeneratorProtocol
 from api.graph.prompts import answer_messages, answer_schema, rewrite_messages
 from api.graph.state import AgentState
-from api.mcp_client import SearchClientProtocol, SearchHit
+from api.mcp_client import MAX_SEARCH_LIMIT, SearchClientProtocol, SearchHit
 
 # The compiled agent graph, as build_graph returns it and ask runs it.
 CompiledAgent = CompiledStateGraph[AgentState]
@@ -47,8 +47,11 @@ class AgentConfig:
             raise ValueError(f"max_hops must be at least 1, not {self.max_hops}.")
         if self.relevance_threshold < 0.0 or self.relevance_threshold > 1.0:
             raise ValueError(f"relevance_threshold must be 0 to 1, not {self.relevance_threshold}.")
-        if self.search_limit < 1:
-            raise ValueError(f"search_limit must be at least 1, not {self.search_limit}.")
+        if self.search_limit < 1 or self.search_limit > MAX_SEARCH_LIMIT:
+            raise ValueError(
+                f"search_limit must be 1 to {MAX_SEARCH_LIMIT}, the search tool's maximum, "
+                f"not {self.search_limit}."
+            )
 
 
 @dataclass(frozen=True)
@@ -99,7 +102,8 @@ class AgentNodes:
         if hits:
             # Hits arrive nearest first, so the first has the highest similarity.
             best_similarity = 1.0 - hits[0].distance
-        relevant = best_similarity >= self.config.relevance_threshold
+        # With no hits there is nothing to answer from, whatever the threshold.
+        relevant = bool(hits) and best_similarity >= self.config.relevance_threshold
         return {"relevant": relevant, "context": hits}
 
     def route(self, state: AgentState) -> str:
