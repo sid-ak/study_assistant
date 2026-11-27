@@ -125,8 +125,9 @@ def run_eval(
         candidates=candidates,
     )
 
-    # Untimed warm-up: an embedder or reranker that loads its model on first use does it here.
-    retrieve_once(questions[0].text, settings)
+    # Untimed warm-up: an embedder or reranker that loads its model on first use does it here. It
+    # also reports how many chunks the reranker scores, fewer than requested on a small store.
+    warm_up = retrieve_once(questions[0].text, settings)
 
     results: list[QuestionResult] = []
     all_latencies: list[float] = []
@@ -171,7 +172,7 @@ def run_eval(
         ef_search=ef_search,
         repeats=repeats,
         reranker=None if reranker is None else reranker.model_id,
-        candidates=None if reranker is None else candidates,
+        candidates=warm_up.candidates,
         recall_at_k=total_recall / len(results),
         mrr=total_reciprocal_rank / len(results),
         latency_p50_ms=percentile(all_latencies, 50),

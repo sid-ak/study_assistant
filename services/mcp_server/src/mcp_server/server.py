@@ -56,7 +56,7 @@ class SearchTool:
         self.candidates = candidates
 
     def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[SearchHit]:
-        """Return the stored chunks nearest to ``query``, nearest first.
+        """Return the stored chunks most relevant to ``query``, most relevant first.
 
         Each hit has the chunk's id, its source document, its heading path, its text, its cosine
         distance to the query (0 is identical, 2 is opposite), and its relevance: the reranker's

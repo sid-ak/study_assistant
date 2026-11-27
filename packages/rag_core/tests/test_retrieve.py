@@ -6,6 +6,7 @@ in for the model, so the whole path from query text to ranked chunks is exercise
 
 import time
 import uuid
+from pathlib import Path
 
 import pytest
 
@@ -231,8 +232,13 @@ def test_search_and_rerank_are_separate_steps(hashing_store: StoreProtocol) -> N
     assert reranked[0].distance == original[DOCUMENTS[1]]
 
 
-def test_build_reranker_follows_the_setting() -> None:
+def test_build_reranker_follows_the_setting(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """``RERANK_ENABLED`` decides whether retrieval gets a reranker at all."""
+    # No .env file and no reranker variables, so only the defaults apply.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("RERANKER_MODEL", raising=False)
     assert build_reranker(Settings(rerank_enabled=False)) is None
     reranker = build_reranker(Settings(rerank_enabled=True))
     assert reranker is not None
