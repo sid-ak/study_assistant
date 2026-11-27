@@ -320,3 +320,11 @@
    :members:
    :show-inheritance:
 ```
+
+## rag_core.rerank.settings
+
+```{eval-rst}
+.. automodule:: rag_core.rerank.settings
+   :members:
+   :show-inheritance:
+```

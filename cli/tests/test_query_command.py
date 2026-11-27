@@ -2,13 +2,14 @@
 
 import re
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from rag_core.store import EmbedderNotFoundError
-from rag_core_testing import HASHING_EMBEDDER, InMemoryStore
+from rag_core_testing import HASHING_EMBEDDER, InMemoryStore, OverlapReranker
 from study_cli import main as cli_main
 from study_cli.main import main
 
@@ -113,3 +114,24 @@ def test_an_unregistered_model_is_a_usage_error(
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "study ingest" in captured.err
+
+
+@pytest.mark.usefixtures("ingested")
+def test_query_reranks_when_the_components_have_a_reranker(
+    components: cli_main.Components,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """With a reranker configured, the summary names it and the candidate count it rescored."""
+    reranked = replace(components, reranker=OverlapReranker(), rerank_candidates=20)
+
+    def build_reranked(settings: object) -> cli_main.Components:
+        """Return the components with a reranker, whatever the settings say."""
+        return reranked
+
+    monkeypatch.setattr(cli_main, "build_components", build_reranked)
+
+    assert main(["query", "undefined reference to pthread_create"]) == 0
+    output = capsys.readouterr().out
+    assert "reranked by test/overlap-reranker from 20 candidates" in output
+    assert RESULT_LINE.findall(output)[0][3] == "ci.md > Failure"

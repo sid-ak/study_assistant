@@ -16,7 +16,7 @@ retrieval boundary (0001) and CLI batch ingestion (0004).
   corpus. Run it with `EMBEDDING_MODEL` and `EMBEDDING_DIMENSION` set for that model.
 - `study query "<text>" [--limit N] [--ef-search N]`: prints the nearest chunks with their rank,
   cosine distance, chunk id, and source with heading path, then the result count, the latency in
-  milliseconds, the model, and `ef_search`. The model is loaded with a warm-up query before the
+  milliseconds, the model, `ef_search`, and the reranker when `RERANK_ENABLED` is on. The model is loaded with a warm-up query before the
   timed search, so the latency covers embedding the query and searching, not model loading.
 
 ## Conventions

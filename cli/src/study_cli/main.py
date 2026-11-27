@@ -18,6 +18,7 @@ from rag_core.embed import (
     register_embedder,
 )
 from rag_core.ingest import ingest_folder
+from rag_core.rerank import RerankerProtocol, build_reranker
 from rag_core.retrieve import retrieve
 from rag_core.store import EmbedderNotFoundError, Store, StoreProtocol
 from rag_core.store.embedders import EmbedderRegistry, EmbedderRegistryProtocol
@@ -35,6 +36,9 @@ class Components:
     embedder: EmbedderProtocol
     store: StoreProtocol
     registry: EmbedderRegistryProtocol
+    # The reranker study query uses, or None for dense search only, and its candidate count.
+    reranker: RerankerProtocol | None = None
+    rerank_candidates: int = 20
 
 
 def build_components(settings: Settings) -> Components:
@@ -46,7 +50,13 @@ def build_components(settings: Settings) -> Components:
     embedder = FastembedEmbedder.from_settings(settings)
     store = Store(settings.database_url, embedder=embedder.info)
     registry = EmbedderRegistry(settings.database_url)
-    return Components(embedder=embedder, store=store, registry=registry)
+    return Components(
+        embedder=embedder,
+        store=store,
+        registry=registry,
+        reranker=build_reranker(settings),
+        rerank_candidates=settings.rerank_candidates,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -157,11 +167,20 @@ def run_query(text: str, limit: int, ef_search: int | None, components: Componen
     components.store.initialize()
     embedder = components.embedder
     model_id = embedder.info.model_id
-    # The first embedding in a process loads the model; do it here, outside the timed search.
+    # The first embedding in a process loads the model; do it here, outside the timed search, and
+    # load the reranker the same way.
     embedder.embed_query("warm up")
+    if components.reranker is not None:
+        components.reranker.score("warm up", ["warm up"])
     try:
         result = retrieve(
-            text, embedder=embedder, store=components.store, limit=limit, ef_search=ef_search
+            text,
+            embedder=embedder,
+            store=components.store,
+            limit=limit,
+            ef_search=ef_search,
+            reranker=components.reranker,
+            candidates=components.rerank_candidates,
         )
     except EmbedderNotFoundError:
         print(
@@ -181,9 +200,15 @@ def run_query(text: str, limit: int, ef_search: int | None, components: Componen
         ef_text = "default"
     else:
         ef_text = str(ef_search)
+    reranked_text = ""
+    if components.reranker is not None:
+        reranked_text = (
+            f", reranked by {components.reranker.model_id} "
+            f"from {components.rerank_candidates} candidates"
+        )
     print(
         f"{len(result.chunks)} results in {result.latency_ms:.1f} ms "
-        f"({model_id}, ef_search {ef_text})"
+        f"({model_id}, ef_search {ef_text}{reranked_text})"
     )
     if not result.chunks:
         print("Nothing is ingested yet: run study ingest <folder> first.")
