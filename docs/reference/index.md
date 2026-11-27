@@ -232,3 +232,19 @@
    :members:
    :show-inheritance:
 ```
+
+## api.generate.rate_limit
+
+```{eval-rst}
+.. automodule:: api.generate.rate_limit
+   :members:
+   :show-inheritance:
+```
+
+## api.generate.cache
+
+```{eval-rst}
+.. automodule:: api.generate.cache
+   :members:
+   :show-inheritance:
+```
