@@ -26,5 +26,11 @@ class Settings(BaseSettings):
     # recommends this instruction for short queries matched against longer passages.
     embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
 
+    # Reranking: whether retrieval reranks, the cross-encoder it uses, and how many dense-search
+    # candidates it rescores before keeping the top results.
+    rerank_enabled: bool = False
+    reranker_model: str = "jinaai/jina-reranker-v1-tiny-en"
+    rerank_candidates: int = 20
+
 
 settings = Settings()
