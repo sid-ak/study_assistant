@@ -1,11 +1,17 @@
 """The agent: a bounded state machine over search, a relevance grade, and generation.
 
-    retrieve -> grade_relevance -> generate                      (relevant)
+    retrieve -> grade_relevance -> review_sources -> generate    (relevant, approved)
                                 -> rewrite_query -> retrieve     (not relevant, hops left)
-                                -> insufficient_context          (not relevant, no hops left)
+                                -> insufficient_context          (nothing left to try)
+
+    review_sources -> rewrite_query -> retrieve                  (rejected, hops left)
+                   -> insufficient_context                       (rejected, no hops left)
 
 Every path ends after at most ``max_hops`` searches. Relevance is graded from the search's own
 similarity score, so the only model requests are the rewrite and the answer, one per step.
+
+``review_sources`` is the human-in-the-loop checkpoint. Without ``require_approval`` it passes
+straight through; with it, the run stops there and waits for a decision under its thread id.
 """
 
 import asyncio
@@ -17,9 +23,16 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Command, Interrupt, interrupt
 
 from api.generate import GenerationError, GeneratorProtocol
 from api.graph.prompts import answer_messages, answer_schema, rewrite_messages
+from api.graph.review import (
+    PendingReview,
+    decision_is_approval,
+    review_from_payload,
+    review_payload,
+)
 from api.graph.state import AgentState
 from api.mcp_client import MAX_SEARCH_LIMIT, SearchClientProtocol, SearchHit
 
@@ -41,6 +54,8 @@ class AgentConfig:
     relevance_threshold: float = 0.65
     # Chunks per search, which are also the chunks the answer step sees.
     search_limit: int = 5
+    # Whether the run stops at the checkpoint to have its sources approved before generating.
+    require_approval: bool = False
 
     def __post_init__(self) -> None:
         """Reject settings no run could satisfy."""
@@ -71,6 +86,10 @@ class AgentAnswer:
     context: list[SearchHit]
     queries: list[str]
     hops: int
+
+
+# What one leg of a run returns: the answer, or the checkpoint it stopped at.
+AgentOutcome = AgentAnswer | PendingReview
 
 
 class AgentNodes:
@@ -109,9 +128,31 @@ class AgentNodes:
         return {"relevant": relevant, "context": hits}
 
     def route(self, state: AgentState) -> str:
-        """The step after grading: generate, rewrite and search again, or stop."""
+        """The step after grading: offer the sources for approval, or try again, or stop."""
         if state["relevant"]:
+            return "review_sources"
+        return self.retry_or_stop(state)
+
+    async def review_sources(self, state: AgentState) -> AgentState:
+        """The checkpoint: pause for a decision on the graded sources, when one is required.
+
+        ``interrupt`` stops the run here and saves it. What a later resume passes back in becomes
+        its return value, and this step runs again from the top, so nothing before it is repeated.
+        Without ``require_approval`` the step approves the sources itself and the run goes on.
+        """
+        if not self.config.require_approval:
+            return {"approved": True}
+        decision = interrupt(review_payload(state))
+        return {"approved": decision_is_approval(decision)}
+
+    def route_after_review(self, state: AgentState) -> str:
+        """The step after the checkpoint: generate the answer, or try again, or stop."""
+        if state["approved"]:
             return "generate"
+        return self.retry_or_stop(state)
+
+    def retry_or_stop(self, state: AgentState) -> str:
+        """Rewrite and search again while a hop is left, otherwise stop without an answer."""
         if state["hops"] < self.config.max_hops:
             return "rewrite_query"
         return "insufficient_context"
@@ -180,15 +221,23 @@ def build_graph(
 ) -> CompiledAgent:
     """Compile the agent over ``search`` and ``generator``.
 
-    With a ``checkpointer``, each run's state is saved under the thread id passed to ``ask``.
+    With a ``checkpointer``, each run's state is saved under the thread id passed to ``ask``,
+    ``start``, or ``resume``. ``require_approval`` needs one, since a pause that is saved nowhere
+    could never be resumed; without it, this raises ``ValueError``.
     """
     if config is None:
         config = AgentConfig()
+    if config.require_approval and checkpointer is None:
+        raise ValueError(
+            "require_approval needs a checkpointer: a run paused with nothing to save its state "
+            "to could not be resumed."
+        )
     nodes = AgentNodes(search, generator, config)
     graph = StateGraph(AgentState)
     graph.add_node("retrieve", nodes.retrieve)
     graph.add_node("grade_relevance", nodes.grade_relevance)
     graph.add_node("rewrite_query", nodes.rewrite_query)
+    graph.add_node("review_sources", nodes.review_sources)
     graph.add_node("generate", nodes.generate)
     graph.add_node("insufficient_context", nodes.insufficient_context)
     graph.add_edge(START, "retrieve")
@@ -197,6 +246,11 @@ def build_graph(
     graph.add_conditional_edges(
         "grade_relevance",
         nodes.route,
+        ["review_sources", "rewrite_query", "insufficient_context"],
+    )
+    graph.add_conditional_edges(
+        "review_sources",
+        nodes.route_after_review,
         ["generate", "rewrite_query", "insufficient_context"],
     )
     graph.add_edge("rewrite_query", "retrieve")
@@ -205,16 +259,43 @@ def build_graph(
     return graph.compile(checkpointer=checkpointer)
 
 
-async def ask(graph: CompiledAgent, question: str, *, thread_id: str | None = None) -> AgentAnswer:
-    """Run ``graph`` on ``question`` and return its answer.
+# The key LangGraph adds to a run's result when the run stopped at an interrupt.
+INTERRUPT_KEY = "__interrupt__"
 
-    ``thread_id`` names the run's saved state when the graph has a checkpointer.
-    """
-    start: AgentState = {"question": question, "query": question, "queries": [], "hops": 0}
-    run_config: RunnableConfig | None = None
-    if thread_id is not None:
-        run_config = {"configurable": {"thread_id": thread_id}}
-    final = await graph.ainvoke(start, config=run_config)
+# What one call to the graph returns: the run's state, plus INTERRUPT_KEY when it paused.
+RunResult = dict[str, Any]
+
+
+def paused_at(final: RunResult) -> Interrupt | None:
+    """The interrupt a leg of a run stopped at, or none when the run finished."""
+    interrupts = final.get(INTERRUPT_KEY)
+    if not interrupts:
+        return None
+    # One interrupt per pause: the checkpoint is the graph's only one.
+    first: Interrupt = interrupts[0]
+    return first
+
+
+def outcome_from(final: RunResult, thread_id: str) -> AgentOutcome:
+    """The checkpoint a leg of a run stopped at, or the answer it finished with."""
+    interrupt_stopped_at = paused_at(final)
+    if interrupt_stopped_at is not None:
+        return review_from_payload(interrupt_stopped_at.value, thread_id)
+    return answer_from(final)
+
+
+def start_state(question: str) -> AgentState:
+    """The state a run begins with: the question, searched as it stands on the first hop."""
+    return {"question": question, "query": question, "queries": [], "hops": 0}
+
+
+def thread_config(thread_id: str) -> RunnableConfig:
+    """The run configuration that names a run's saved state."""
+    return {"configurable": {"thread_id": thread_id}}
+
+
+def answer_from(final: RunResult) -> AgentAnswer:
+    """The ``AgentAnswer`` a finished run's state describes, with its citations resolved."""
     context: list[SearchHit] = final.get("context", [])
     cited: list[str] = final.get("cited_chunk_ids", [])
     by_id: dict[str, SearchHit] = {}
@@ -233,3 +314,47 @@ async def ask(graph: CompiledAgent, question: str, *, thread_id: str | None = No
         queries=final["queries"],
         hops=final["hops"],
     )
+
+
+async def ask(graph: CompiledAgent, question: str, *, thread_id: str | None = None) -> AgentAnswer:
+    """Run ``graph`` on ``question`` from start to answer and return it.
+
+    ``thread_id`` names the run's saved state when the graph has a checkpointer. A graph that
+    pauses for approval cannot finish in one call, so this raises ``ValueError`` for one; use
+    ``start`` and ``resume`` instead.
+    """
+    run_config = None if thread_id is None else thread_config(thread_id)
+    final: RunResult = await graph.ainvoke(start_state(question), config=run_config)
+    if paused_at(final) is not None:
+        raise ValueError(
+            "The run stopped for approval of its sources. Use start and resume, or build the "
+            "graph without require_approval."
+        )
+    return answer_from(final)
+
+
+async def start(graph: CompiledAgent, question: str, *, thread_id: str) -> AgentOutcome:
+    """Run ``graph`` on ``question`` until it answers or stops at the checkpoint.
+
+    The state is saved under ``thread_id``, which ``resume`` names to continue a paused run.
+    """
+    final: RunResult = await graph.ainvoke(start_state(question), config=thread_config(thread_id))
+    return outcome_from(final, thread_id)
+
+
+async def resume(graph: CompiledAgent, decision: str, *, thread_id: str) -> AgentOutcome:
+    """Continue the run paused under ``thread_id`` with ``decision`` on its sources.
+
+    Approval goes on to the answer; rejection searches again while a hop is left. The run can stop
+    at the checkpoint again, on the sources the rewritten query found. Raises ``ValueError`` if no
+    run under ``thread_id`` is waiting for a decision, so a stale thread id cannot start a new run.
+    """
+    config = thread_config(thread_id)
+    saved = await graph.aget_state(config)
+    # Resuming a thread that is not paused would run the graph from the start on empty state.
+    if not saved.interrupts:
+        raise ValueError(f"No run under thread id {thread_id!r} is waiting for a decision.")
+    # Checked here as well as in the node, so a bad decision costs no saved state.
+    decision_is_approval(decision)
+    final: RunResult = await graph.ainvoke(Command(resume=decision), config=config)
+    return outcome_from(final, thread_id)

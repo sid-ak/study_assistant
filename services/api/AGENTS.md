@@ -17,6 +17,11 @@ bounded agent (0012).
 - `api.graph`: `build_graph(search, generator, config=..., checkpointer=None)` compiles the agent,
   and `ask(graph, question, thread_id=None)` runs it and returns an `AgentAnswer` (status, answer,
   cited chunk ids, the resolved citations, the context shown to the model, queries, hops).
+- `api.graph` approval checkpoint: with `require_approval`, `start(graph, question,
+  thread_id=...)` runs until the sources need a decision and `resume(graph, decision,
+  thread_id=...)` continues that run with `APPROVE` or `REJECT`. Both return an `AgentOutcome`:
+  an `AgentAnswer`, or a `PendingReview` (thread id, question, query, hops, and the sources as
+  `PendingSource` records of id, document, and section).
 - `api.generate`: `GeneratorProtocol` and `OpenAICompatibleGenerator`, configured by the
   `GENERATION_*` settings in `api.config.ApiSettings`.
 - `api.mcp_client`: `SearchClientProtocol` and `McpSearchClient`, which starts `study-mcp` over
@@ -28,8 +33,22 @@ bounded agent (0012).
   `tests/test_retrieval_boundary.py` fails on any `rag_core` import under `src/api`. Tests may
   import `rag_core` and `mcp_server` to build an in-process server.
 - The graph is a fixed state machine, not a tool-calling loop: `retrieve -> grade_relevance ->`
-  `generate`, or `rewrite_query -> retrieve`, or `insufficient_context`. It searches at most
-  `max_hops` times (default 2).
+  `review_sources -> generate`, or `rewrite_query -> retrieve`, or `insufficient_context`. It
+  searches at most `max_hops` times (default 2).
+- `review_sources` is the human-in-the-loop checkpoint, and it is where every approval rule lives:
+  - Without `require_approval` (the default) it approves the sources itself, so the one-shot path
+    is unchanged.
+  - With it, the node calls LangGraph's `interrupt` with the pending sources as plain values, and
+    the run stops there until a decision arrives. The node runs again from the top on resume, so
+    no earlier step is repeated.
+  - A rejection costs a hop: it routes to `rewrite_query` while `hops < max_hops`, and to
+    `insufficient_context` otherwise. Rejections are bounded by the same limit as low relevance.
+  - Irrelevant context never reaches the checkpoint: there is nothing to approve, and the graph
+    rewrites on its own.
+  - `require_approval` without a checkpointer is refused when the graph is compiled, since a pause
+    saved nowhere could not be resumed. `ask` refuses a graph that pauses, and `resume` refuses a
+    thread id that is not waiting for a decision, which would otherwise start a new run on empty
+    state. An unknown decision is refused rather than counted as a rejection.
 - One model request per step. Grading uses the top hit's `relevance` as the MCP server reports it
   (the cross-encoder's score when `RERANK_ENABLED` is on, the cosine similarity otherwise) against
   `relevance_threshold` (default 0.65), with no model call. Only `rewrite_query` (free text)

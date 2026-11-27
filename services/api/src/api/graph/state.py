@@ -22,6 +22,8 @@ class AgentState(TypedDict, total=False):
     relevant: bool
     # The chunks the answer step was shown, or the latest hits when it was never reached.
     context: list[SearchHit]
+    # Whether the latest hits were approved at the checkpoint. True without an approval step.
+    approved: bool
     status: str
     answer: str
     cited_chunk_ids: list[str]
