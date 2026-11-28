@@ -7,6 +7,7 @@ offline, and for free. Generation goes through any OpenAI-compatible endpoint: t
 hosted model, and a local runtime works through the same adapter.
 
 - Design: [`docs/architecture.md`](docs/architecture.md)
+- Usage and CLI reference: [`docs/usage.md`](docs/usage.md)
 - Decisions: [`docs/decisions/`](docs/decisions/) (ADRs)
 - Roadmap: [GitHub issues](https://github.com/sid-ak/study_assistant/issues) (phased)
 
@@ -19,6 +20,9 @@ generation uses Groq's free plan (ADR 0011).
 
 [`docs/walkthrough.md`](docs/walkthrough.md) is the MVP end to end with its measured results, and
 the chunk summaries below say what each step added.
+
+[`docs/usage.md`](docs/usage.md) is the guide to running it: setup, the everyday workflow, a
+second corpus in its own database, and a reference for every command and setting.
 
 Measured over ten golden questions on the 17-document corpus, reproduced from a fresh clone:
 
