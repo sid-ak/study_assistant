@@ -83,6 +83,11 @@ Chunk 7 (#50) is the code freeze: a fresh clone was taken through this README, t
 against the code, and the walkthrough was written. What is known to be missing is listed at the end
 of [the walkthrough](docs/walkthrough.md).
 
+After the MVP, `study-chat` (`apps/chat/`) adds a local Streamlit chat page over the same agent,
+so questions can be asked one after another without the command line. It is a stopgap ahead of the
+planned React frontend: it runs one full agent run per question, with no streaming and no approval
+step.
+
 Later phases add the FastAPI backend and the React frontend.
 
 ## Prerequisites
@@ -127,6 +132,13 @@ the MCP server itself:
 ```sh
 uv run study-ask "Which Bazel flag runs every test under AddressSanitizer?"
 uv run study-eval-agent my-agent-run
+```
+
+Or ask from a chat page in the browser. It listens on `localhost:8501` only, and runs the same agent
+once per message:
+
+```sh
+uv run study-chat
 ```
 
 Approve the sources before the answer is written. The first command prints the thread id to use in

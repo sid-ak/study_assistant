@@ -11,7 +11,7 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*", "cli", "evals", "services/*"]
+members = ["packages/*", "cli", "evals", "services/*", "apps/*"]
 
 # Workspace members are developed in-place; wire them in as editable sources.
 [tool.uv.sources]
@@ -21,6 +21,7 @@ study_cli = { workspace = true }
 evals = { workspace = true }
 mcp_server = { workspace = true }
 api = { workspace = true }
+study_chat = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -30,6 +31,7 @@ dev = [
     "evals",
     "mcp_server",
     "api",
+    "study_chat",
     "ruff>=0.6",
     "mypy>=1.11",
     "pytest>=8.0",
@@ -51,6 +53,7 @@ src = [
     "evals/src",
     "services/mcp_server/src",
     "services/api/src",
+    "apps/chat/src",
 ]
 
 [tool.ruff.lint]
@@ -72,6 +75,8 @@ mypy_path = [
     "services/mcp_server/src",
     "services/api/src",
     "services/api/tests",
+    "apps/chat/src",
+    "apps/chat/tests",
 ]
 files = [
     "packages/rag_core/src",
@@ -85,6 +90,8 @@ files = [
     "services/mcp_server/tests",
     "services/api/src",
     "services/api/tests",
+    "apps/chat/src",
+    "apps/chat/tests",
 ]
 explicit_package_bases = true
 namespace_packages = true
@@ -95,7 +102,7 @@ module = ["pgvector.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["packages", "cli", "evals", "services"]
+testpaths = ["packages", "cli", "evals", "services", "apps"]
 markers = [
     "integration: tests that need a live Postgres+pgvector instance (docker compose up -d) or download and load a real model",
     "unit: fast tests with no external services (auto-applied to every non-integration test)",

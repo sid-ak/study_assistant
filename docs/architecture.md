@@ -176,6 +176,11 @@ study_assistant/
 │           └── main.py          # FastAPI application: later phase
 │       └── tests/
 ├── apps/
+│   ├── chat/                    # `study-chat` Streamlit page over the agent; stopgap before web/
+│   │   ├── AGENTS.md            # canonical context — page surface, local-only launch
+│   │   ├── pyproject.toml
+│   │   ├── src/study_chat/
+│   │   └── tests/
 │   └── web/                     # React + TypeScript: later phase
 │       ├── AGENTS.md            # canonical context — citations, SSE client, TS/React
 │       ├── package.json
