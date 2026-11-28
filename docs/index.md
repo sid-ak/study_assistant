@@ -9,6 +9,7 @@
 :caption: Project
 
 architecture.md
+usage.md
 walkthrough.md
 ```
 
