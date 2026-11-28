@@ -31,6 +31,9 @@ FAILURE = 1
 # Exit status for settings the agent cannot honor, as argparse uses for bad arguments.
 USAGE_ERROR = 2
 
+# What a run shows when the documents it found did not answer the question.
+NO_ANSWER = "No answer: the documents found did not answer the question."
+
 
 def agent_config(settings: ApiSettings, *, require_approval: bool = False) -> AgentConfig:
     """The agent's bounds from the ``AGENT_*`` settings, pausing for approval if asked."""
@@ -156,6 +159,12 @@ def check_arguments(args: argparse.Namespace) -> None:
         raise ValueError("--thread-id names a run paused by --review.")
 
 
+def searches_line(result: AgentAnswer) -> str:
+    """How many searches a run made and what each searched for: ``2 searches: a; b``."""
+    searches = "search" if result.hops == 1 else "searches"
+    return f"{result.hops} {searches}: " + "; ".join(result.queries)
+
+
 def print_answer(result: AgentAnswer) -> None:
     """Print the answer or the insufficient-context message, its sources, and the searches."""
     if result.status == "answered":
@@ -165,10 +174,9 @@ def print_answer(result: AgentAnswer) -> None:
         for number, citation in enumerate(result.citations, start=1):
             print(f"[{number}] {citation.document} > {citation.section}")
     else:
-        print("No answer: the documents found did not answer the question.")
-    searches = "search" if result.hops == 1 else "searches"
+        print(NO_ANSWER)
     print()
-    print(f"{result.hops} {searches}: " + "; ".join(result.queries))
+    print(searches_line(result))
 
 
 def print_pending(pending: PendingReview) -> None:
